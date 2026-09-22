@@ -55,31 +55,39 @@ stateDiagram-v2
     [*] --> Abierto: Maestro crea ticket en formulario
     Abierto --> En_Proceso: Líder asigna técnico / Técnico toma el ticket
     En_Proceso --> Resuelto: Técnico registra solución en SOLUCIONES
-    Resuelto --> Cerrado: Maestro o Líder confirma solución
-    Resuelto --> En_Proceso: Si la falla persiste (Reapertura)
+    Resuelto --> Cerrado: Maestro, Líder o Admin confirma solución
     Cerrado --> [*]
 ```
 
 ### Transiciones y Reglas de Validación:
 
 1. **`Abierto` (Estado Inicial):**
-   - **Campos obligatorios:** `nombre_ticket`, `descripcion`, `id_aula`, `tipos_problema` (al menos 1).
-   - **Equipo afectado (`id_equipo`):** Es **opcional**. Si se reporta una falla general (red del aula, clima, proyector general), se envía como `NULL`.
+   - **Campos del formulario de reporte:**
+     - `nombre_ticket` (VARCHAR 100): Asunto o título breve de la incidencia.
+     - `id_aula` (INT NOT NULL): Aula o laboratorio donde se presenta el problema.
+     - `id_equipo` (INT NULLABLE): Equipo específico afectado (opcional; `NULL` para fallas generales de aula, red o proyector).
+     - `problemas_ids` (ARRAY[INT] NOT NULL): Lista de IDs seleccionados de `TIPOS_PROBLEMA` (al menos 1 categoría; permite asociar múltiples problemas al ticket en `TICKETS_PROBLEMAS`).
+     - `descripcion` (TEXT NOT NULL): Redacción libre y detallada por el Maestro explicando la problemática.
    - **Consistencia:** Si se selecciona un equipo, el backend valida que `equipo.id_aula == ticket.id_aula`.
-   - **Asignación:** Se guarda con `id_tecnico = NULL`. Cae automáticamente a la bandeja del laboratorio.
+   - **Asignación Inicial:** Se guarda con `id_tecnico = NULL`. Cae automáticamente a la bandeja de entrada del laboratorio correspondiente.
 
 2. **`En Proceso`:**
    - Ocurre cuando el Líder asigna a un técnico (`id_tecnico = <UUID>`).
    - El backend valida que el técnico asignado pertenezca a la misma aula (`tecnico.laboratorio_asignado_id == ticket.id_aula`).
+   - **Reasignación:** Un Líder puede reasignar un ticket en proceso a otro técnico de su mismo laboratorio; el ticket continúa `En Proceso` y se audita el cambio en `HISTORIAL_ESTADO`.
    - **Automatización de Inventario:** Si el ticket tiene un `id_equipo` asociado, el backend actualiza automáticamente `EQUIPOS.estado_actual = 'En Mantenimiento'`.
 
 3. **`Resuelto`:**
    - Solo el técnico asignado (o el administrador) puede marcar este estado.
    - **Requisito estricto:** El formulario exige enviar texto detallando qué se reparó. El backend inserta un registro en la tabla `SOLUCIONES`.
+   - **Salida:**
+     - **Confirmación (`Cerrado`):** El Maestro creador o el Administrador validan la solución satisfactoria y cierran el ticket con 1 clic de confirmación directa.
+     - **Reapertura (`En Proceso`):** Si la falla persiste, el Maestro o el admin pueden reabrirlo, devolviendo el estado a `En Proceso` y el equipo a `'En Mantenimiento'`.
 
 4. **`Cerrado`:**
-   - Cierre definitivo. Lo ejecuta el Maestro que creó el reporte tras validar que todo funciona, o el Líder/Administrador.
+   - Cierre definitivo mediante acción manual directa de 1 clic (sin encuesta obligatoria). Lo ejecuta el Maestro que creó el reporte tras validar que todo funciona, o el Líder/Administrador.
    - **Automatización de Inventario:** Si el ticket tiene un `id_equipo` asociado, el backend restaura `EQUIPOS.estado_actual = 'Operativo'`.
+   - **Permanencia:** El ticket permanece en `Resuelto` hasta que exista una acción manual explícita de confirmación (no hay auto-cierre por temporizador).
 
 ---
 
@@ -96,11 +104,14 @@ Cada vez que el endpoint de actualización de ticket detecte un cambio en la col
 
 ## 5. Sistema de Notificaciones
 
-El sistema maneja un canal dual para notificaciones ante eventos clave (Creación de ticket, Asignación, Cambio a `Resuelto`, Cambio a `Cerrado`):
+El sistema maneja un canal dual optimizado para evitar saturación de correos:
 
 1. **Bandeja Interna (`NOTIFICACIONES`):**
    - Se inserta un registro en la base de datos para el usuario destino con `leido = FALSE`.
-   - Alimenta la campana de notificaciones en el frontend en tiempo real.
-2. **Correo Electrónico (Supabase SMTP):**
-   - FastAPI invoca el envío de correo utilizando las credenciales SMTP de Supabase al correo registrado en `USUARIOS.email`.
-   - El correo incluye enlace directo al ticket y resumen de la acción realizada.
+   - Se genera en todos los eventos (creación, asignación, solución, reapertura y cierre) para alimentar la campana de notificaciones de la SPA en tiempo real.
+2. **Correo Electrónico Esencial (Supabase SMTP vía `fastapi.BackgroundTasks`):**
+   - Despacho asíncrono en segundo plano para no bloquear respuestas HTTP.
+   - **Eventos con envío de correo:**
+     - **Al Técnico:** Cuando un Líder le asigna o reasigna un ticket (`En Proceso`).
+     - **Al Maestro:** Cuando el técnico marca el ticket como `Resuelto` (incluye el texto de la solución registrada).
+     - **Al Maestro:** Cuando el ticket pasa formalmente a `Cerrado`.
