@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes - Gestión de Tickets</title>
+  <link rel="icon" type="image/x-icon" href="../../../public/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+    rel="stylesheet">
+
+  <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
+  <link href="./reportes.css" rel="stylesheet" type="text/css" media="all">
+</head>
+
+<body class="reportes-body">
+  <div class="reportes-wrapper">
+    <main class="reportes-container" aria-label="Panel de Historial de Reportes">
+      <header class="reportes-header">
+        <a href="../../../dashboard.html" class="btn-volver" title="Volver al panel principal" aria-label="Volver">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+        </a>
+        <div class="header-text">
+          <h1 class="header-title">Reportes</h1>
+          <p class="header-subtitle">Análisis de tickets generados</p>
+        </div>
+      </header>
+      <section class="filters-card" aria-label="Filtros de búsqueda">
+        <div class="filters-dropdowns">
+          <div class="filter-group">
+            <label for="filtro-estado" class="filter-label">Estado</label>
+            <div class="filter-selector">
+              <select id="filtro-estado" class="filter-select">
+                <option value="todos" selected>Todos</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="en-proceso">En proceso</option>
+                <option value="resuelto">Resueltos</option>
+              </select>
+              <span class="filter-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label for="filtro-laboratorio" class="filter-label">Laboratorio</label>
+            <div class="filter-selector">
+              <select id="filtro-laboratorio" class="filter-select">
+                <option value="todos" selected>Todos</option>
+                <option value="aula-1">Aula 5G-A101</option>
+                <option value="aula-2">Aula 5O-A103</option>
+                <option value="aula-3">Aula 5K-A202</option>
+                <option value="aula-4">Aula 5G-A303</option>
+                <option value="5J-CO203">5J-CO203</option>
+                <option value="5K-A303">5K-A303</option>
+                <option value="5O-CO101">5O-CO101</option>
+              </select>
+              <span class="filter-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label for="filtro-periodo" class="filter-label">Período</label>
+            <div class="filter-selector">
+              <select id="filtro-periodo" class="filter-select">
+                <option value="ultimo-mes" selected>Último mes</option>
+                <option value="hoy">Hoy</option>
+                <option value="ultima-semana">Última semana</option>
+                <option value="este-ano">Este año</option>
+              </select>
+              <span class="filter-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="filters-actions">
+          <button type="button" class="btn-filter-clear">Limpiar</button>
+          <button type="button" class="btn-filter-apply">Aplicar filtros</button>
+        </div>
+      </section>
+
+      <section class="kpi-row" aria-label="Indicadores clave de rendimiento">
+        <article class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Total de tickets</span>
+            <span class="kpi-dot total" aria-hidden="true"></span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">156</span>
+            <div class="kpi-trend">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+              <span>+12% vs semana anterior</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Pendientes</span>
+            <span class="kpi-dot pendiente" aria-hidden="true"></span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">23</span>
+            <div class="kpi-trend">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+              <span>-4% vs semana anterior</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">En proceso</span>
+            <span class="kpi-dot en-proceso" aria-hidden="true"></span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">45</span>
+            <div class="kpi-trend">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+              <span>+8% vs semana anterior</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Resueltos</span>
+            <span class="kpi-dot resuelto" aria-hidden="true"></span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value">88</span>
+            <div class="kpi-trend">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+              <span>+15% vs semana anterior</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="charts-section" aria-label="Gráficos de incidencias">
+
+        <article class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Tickets por Estado</h2>
+            <p class="chart-subtitle">Distribución actual de incidencias</p>
+          </div>
+          <div class="bar-chart-body">
+
+            <div class="bar-col">
+              <span class="bar-value pendiente">23</span>
+              <div class="bar-pillar pendiente" title="Pendientes: 23"></div>
+              <span class="bar-label">Pendientes</span>
+            </div>
+
+            <div class="bar-col">
+              <span class="bar-value en-proceso">45</span>
+              <div class="bar-pillar en-proceso" title="En proceso: 45"></div>
+              <span class="bar-label">En proceso</span>
+            </div>
+
+            <div class="bar-col">
+              <span class="bar-value resuelto">88</span>
+              <div class="bar-pillar resuelto" title="Resueltos: 88"></div>
+              <span class="bar-label">Resueltos</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <div class="chart-header">
+            <h2 class="chart-title">Tickets por Laboratorio</h2>
+            <p class="chart-subtitle">Incidencias reportadas por aula</p>
+          </div>
+          <div class="horizontal-chart-body">
+            <div class="h-bar-row">
+              <span class="h-bar-label">Aula 5G-A101</span>
+              <div class="h-bar-track">
+                <div class="h-bar-fill fill-aula-1" title="Aula 5G-A101: 42 tickets"></div>
+              </div>
+              <span class="h-bar-value">42</span>
+            </div>
+
+            <div class="h-bar-row">
+              <span class="h-bar-label">Aula 5O-A103</span>
+              <div class="h-bar-track">
+                <div class="h-bar-fill fill-aula-2" title="Aula 5O-A103: 35 tickets"></div>
+              </div>
+              <span class="h-bar-value">35</span>
+            </div>
+
+            <div class="h-bar-row">
+              <span class="h-bar-label">Aula 5K-A202</span>
+              <div class="h-bar-track">
+                <div class="h-bar-fill fill-aula-3" title="Aula 5K-A202: 28 tickets"></div>
+              </div>
+              <span class="h-bar-value">28</span>
+            </div>
+
+            <div class="h-bar-row">
+              <span class="h-bar-label">Aula 5G-A303</span>
+              <div class="h-bar-track">
+                <div class="h-bar-fill fill-aula-4" title="Aula 5G-A303: 51 tickets"></div>
+              </div>
+              <span class="h-bar-value">51</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="table-card" aria-label="Listado de tickets">
+        <div class="table-responsive">
+          <table class="tickets-table">
+            <thead>
+              <tr>
+                <th class="th-id">ID</th>
+                <th class="th-titulo">Título</th>
+                <th class="th-aula">Aula</th>
+                <th class="th-equipo">Equipo</th>
+                <th class="th-estado">Estado</th>
+                <th class="th-fecha">Fecha</th>
+                <th class="th-responsable">Responsable</th>
+                <th class="th-acciones">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="td-id">#001</td>
+                <td class="td-titulo">Monitor no enciende</td>
+                <td class="td-aula">5J-CO203</td>
+                <td class="td-equipo">PC-01</td>
+                <td class="td-estado">
+                  <span class="badge-status badge-pendiente">Pendiente</span>
+                </td>
+                <td class="td-fecha">01/09/2026</td>
+                <td class="td-responsable">Juan Pérez</td>
+                <td class="td-acciones">
+                  <button type="button" class="btn-view-ticket bg-slate" title="Ver detalles del ticket"
+                    aria-label="Ver detalles ticket #001">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+
+              <tr class="row-alt">
+                <td class="td-id">#002</td>
+                <td class="td-titulo">Teclado dañado</td>
+                <td class="td-aula">5K-A303</td>
+                <td class="td-equipo">PC-05</td>
+                <td class="td-estado">
+                  <span class="badge-status badge-en-proceso">En proceso</span>
+                </td>
+                <td class="td-fecha">28/08/2026</td>
+                <td class="td-responsable">María López</td>
+                <td class="td-acciones">
+                  <button type="button" class="btn-view-ticket" title="Ver detalles del ticket"
+                    aria-label="Ver detalles ticket #002">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+
+              <tr>
+                <td class="td-id">#003</td>
+                <td class="td-titulo">Mouse sin respuesta</td>
+                <td class="td-aula">5O-CO101</td>
+                <td class="td-equipo">PC-09</td>
+                <td class="td-estado">
+                  <span class="badge-status badge-resuelto">Resuelto</span>
+                </td>
+                <td class="td-fecha">27/08/2026</td>
+                <td class="td-responsable">Carlos Ruiz</td>
+                <td class="td-acciones">
+                  <button type="button" class="btn-view-ticket bg-slate" title="Ver detalles del ticket"
+                    aria-label="Ver detalles ticket #003">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <footer class="table-pagination">
+          <p class="pagination-text">Mostrando 1–8 de 156 tickets</p>
+          <div class="pagination-controls">
+            <a href="#" class="pagination-btn" title="Página anterior" aria-label="Página anterior">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </a>
+            <a href="#" class="pagination-btn active" aria-current="page">1</a>
+            <a href="#" class="pagination-btn">2</a>
+            <a href="#" class="pagination-btn">3</a>
+            <span class="pagination-ellipsis">...</span>
+            <a href="#" class="pagination-btn">16</a>
+            <a href="#" class="pagination-btn" title="Página siguiente" aria-label="Página siguiente">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </a>
+            <div class="page-size-selector" title="Registros mostrados por página">
+              <span>3 por página</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
+        </footer>
+      </section>
+
+    </main>
+  </div>
+</body>
+
+</html>
