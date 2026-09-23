@@ -38,11 +38,19 @@ API 2/
 │   └── .env.example
 ├── frontend/
 │   ├── index.html
+|   ├── public/
+│   │   └── imgs/                 # Imagenes fijas
 │   ├── src/
-│   │   ├── assets/         # Estilos CSS, imágenes, fuentes
-│   │   ├── components/     # Componentes modulares reutilizables
-│   │   ├── pages/          # Vistas (Login, Dashboard, Formulario Ticket, Admin)
-│   │   └── services/       # Clientes HTTP (API y Supabase Auth)
+│   │   ├── main.js               # Archivo JS principal (inicializa la app, rutas, auth)
+│   │   ├── style.css             # Variables CSS globales, tipografia y resets base
+│   │   ├── components/           # Componentes modulares reutilizables
+│   │   ├── pages/                # Vistas (Login, Dashboard, Formulario Ticket, Admin)
+|   │   │   ├── login/
+|   |   |   |    ├── login.css    # Estilos especificos
+|   |   |   |    ├── login.js     # Logica especifica del login
+│   │   |   |    └── login.html   # Estructura del login
+│   │   |   └── gestion/          # Gestion.html
+│   │   └── services/             # Clientes HTTP (API y Supabase Auth)
 │   ├── package.json
 │   └── vite.config.js
 ├── database/
