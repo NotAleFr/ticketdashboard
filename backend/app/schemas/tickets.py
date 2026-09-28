@@ -14,11 +14,19 @@ class TicketBase(BaseModel):
 class TicketCreate(TicketBase):
     problemas_ids: List[int] 
 
+class TicketUpdate(BaseModel):
+    """Todos los campos opcionales: solo se actualiza lo que se envíe."""
+    nombre_ticket: Optional[str] = None
+    descripcion: Optional[str] = None
+    estado: Optional[EstadoTicket] = None
+    id_tecnico: Optional[UUID] = None
+    id_equipo: Optional[int] = None
+
 class TicketRead(TicketBase):
     id_ticket: int
     estado: EstadoTicket
     fecha_registro: datetime
-    
+
     # UUIDs because of Supabase Auth
     id_usuario: UUID
     id_tecnico: Optional[UUID] = None
