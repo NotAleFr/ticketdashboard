@@ -9,9 +9,14 @@ class AulaBase(BaseModel):
 class AulaCreate(AulaBase):
     pass 
 
+class AulaUpdate(BaseModel):
+    nombre: Optional[str] = None
+    ubicacion: Optional[str] = None
+    activo: Optional[bool] = None
+
 class AulaRead(AulaBase):
     id_aula: int
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 class EquipoBase(BaseModel):
@@ -23,7 +28,13 @@ class EquipoBase(BaseModel):
 class EquipoCreate(EquipoBase):
     pass
 
+class EquipoUpdate(BaseModel):
+    tipo: Optional[str] = None
+    identificador: Optional[str] = None
+    id_aula: Optional[int] = None
+    estado_actual: Optional[str] = None
+
 class EquipoRead(EquipoBase):
     id_equipo: int
-    
+
     model_config = ConfigDict(from_attributes=True)
