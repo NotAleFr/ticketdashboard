@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.core.deps import get_current_user, CurrentUser
+from app.core.deps import get_current_user
+from app.models.usuarios import Usuario
 from app.models.tickets import Ticket, TicketProblema
 from app.schemas.tickets import TicketCreate, TicketUpdate, TicketRead
 
@@ -29,7 +30,7 @@ def obtener_ticket(id_ticket: int, db: Session = Depends(get_db)):
 def crear_ticket(
     datos: TicketCreate,
     db: Session = Depends(get_db),
-    usuario_actual: CurrentUser = Depends(get_current_user),
+    usuario_actual: Usuario = Depends(get_current_user),
 ):
     nuevo = Ticket(
         nombre_ticket=datos.nombre_ticket,
