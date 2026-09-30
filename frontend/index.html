@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket Dashboard - Redirigiendo...</title>
+</head>
+<body>
+  <script>
+    // Revisa si ya tenemos el token guardado en localStorage
+    const token = localStorage.getItem('access_token');
+
+    if (token) {
+      // Si hay token, redirige al dashboard
+      window.location.href = '/dashboard.html';
+    } else {
+      // Si no hay token, redirige al login
+      window.location.href = '/src/pages/login/login.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,66 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tickets</title>
-    <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
-    <link rel="icon" type="image/x-icon" href="./imgs/LOGO-OJO-BUHO-AMARILLO.png">
-    <!-- Esto es para conectarse a la fuente-->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-    <!-- Si lo quieren quitar, descarguen y coloquen la fuente en el proyecto -->      
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de tickets</title>
+  <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body>
-    <div class="ma columna" style="height: 100%;width: 100%;">
-        <div class="ma columna azulCover2 cointainer"  style="position: relative; display: flex; flex-wrap: wrap; align-items: stretch; ">
-             <div class="fila ma " style="width: 100%;padding: 0px; box-sizing: border-box" ><img src="./imgs/iconos/arrowback.svg"  style="margin-left: 0%; margin-right: 2rem;" class="ma" alt=""> <p  class="ma" style="color: white; margin-left: 0; font-size: 2rem; font-weight: 600;">Gestion de tickets</p>
-            <a class="ma" href="./nuevo.html" style="margin-right: 0rem;"><input class="btn" style="width: 100%; border-radius: 20rem; font-weight: 700;" type="button" value="+ Nuevo Ticket"></a>
-              
-            </div>
-             <div class="fila ma"  style="width: 100%; box-sizing: border-box; padding: 0px; margin-bottom: .5rem;">
-                <select name="" id="">
-                    <option value="todo">Estado: todo</option>
-                </select>
-                <select name="" id="">
-                    <option value="toda">Prioridad: toda</option>
-                </select>
-                <select name="" id="">
-                    <option value="todas">Aula: todas</option>
-                </select>
-                <input type="text" name="" id="" placeholder="Buscar Texto" style="width: 1000%; margin: 0%;">
-             </div>
-             <div class="m0 whitebox tablatop" style="">Detalle del Ticket</div>
-             <div class="ma columna whitebox" style="overflow: scroll;  width: 100%; box-sizing: border-box; padding: 0px;flex-grow: 1; height: auto; border-radius: 0%;">
-                <tr></tr>
-             </div>
-             <div class="m0 whitebox tablabot" style=><span class="gris">6 tickets</span></div>
-             
-            <div class="m0 whitebox tablatop" >Detalle del Ticket</div>
-            <div class="ma columna whitebox" style=" width: 100%; box-sizing: border-box; ; height: 18rem;border-top-left-radius: 0%;  border-top-right-radius: 0%; padding: 1rem; padding-top: 0%;">
-                <div class="" style="padding: 0%; align-items: start; flex-grow: 1;">
-                <div style="height: 100%; float: left ;" class="columna">
-                    <h4><span class="gris">Aula: </span>5J-CO202</h4>
-                    <h4><span class="gris">Reportado por: </span> Prof. Sánchez</h4>
-                    <h4><span class="gris">Descripcion: </span> Teclado USB no responde. Se probó en otro equipo y tampoco.</h4>
-                    <h4><span class="gris">Prihoridad: </span><span class="estadosmall estverde">Baja</span></h4>
-                    <h3><span class="gris">Historial: </span></h3>
-                    <h4><span class="gris">⏲ 25/08 09:00 </span>- creado</h4>
-                    <h4><span class="gris">⏲ 25/08 14:20 </span>- asignado a técnico</h4>
-                </div>
-                <div style="height: 100%; float: right; padding: 1rem;" class="columna ">
-                    <h4><span class="gris">Equipo: </span>PC-10</h4>
-                    <h4><span class="gris">Fecha 25/08/2026 </span>- creado</h4>
-                    <h4><span class="gris">Estado: </span><span class="estadosmall estamarillo">En progreso</span></h4>
-                </div>
-                </div>
-            <div class="" >
-                <input class="btnsmall"  type="button" value="Asignar responsable">
-                <input class="btnsmall"  type="button" value="Cambiar estado">
-                <input class="btnsmall"type="button" value="Cambiar prihoridad">
-                <input class="btnsmall btnred"  type="button" value="Cerrar ticket">
-             </div>
-    </div>
+  <main class="ticket-page">
+    <section class="ticket-page__shell">
+      <header class="ticket-page__header">
+        <a class="ticket-page__back" href="../../../dashboard.html">← Panel</a>
+        <h1>Gestión de tickets</h1>
+        <a class="ticket-page__new-ticket" href="./nuevo.html">
+          <span class="btn ticket-page__new-ticket-button">+ Nuevo ticket</span>
+        </a>
+      </header>
+
+      <section class="whitebox ticket-page__panel">
+        <div class="ticket-page__filters">
+          <label for="status-filter">Estado
+            <select id="status-filter">
+              <option value="">Todos</option>
+              <option value="Abierto">Abierto</option>
+              <option value="En Proceso">En proceso</option>
+              <option value="Resuelto">Resuelto</option>
+              <option value="Cerrado">Cerrado</option>
+            </select>
+          </label>
+          <input id="ticket-search" type="search" placeholder="Buscar por título o descripción" aria-label="Buscar tickets">
+          <button id="refresh-tickets" class="btnsmall" type="button">Actualizar</button>
+        </div>
+      </section>
+
+      <section class="whitebox ticket-page__panel">
+        <p id="tickets-message" class="gris" role="status" aria-live="polite">Cargando tickets…</p>
+        <div class="ticket-page__table-wrap">
+        <table class="ticket-page__table">
+          <thead>
+            <tr>
+              <th align="left">ID</th>
+              <th scope="col">Título</th>
+              <th scope="col">Aula</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Creado</th>
+            </tr>
+          </thead>
+          <tbody id="tickets-body"></tbody>
+        </table>
+        </div>
+        <p id="tickets-count" class="gris"></p>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="./gestion.js"></script>
 </body>
 </html>

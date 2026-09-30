@@ -1,6 +1,8 @@
 # Especificación de Lógica de Negocio y Reglas del Sistema (API II)
 Este documento define las reglas de negocio, ciclo de vida de tickets, permisos por rol y automatizaciones para los desarrolladores del sistema.
 
+> **Estado de implementación (demo API-53):** el flujo disponible es inicio de sesión con Supabase Auth, validación del perfil `USUARIOS`, listado/filtrado y creación de tickets con aula, equipo opcional y categorías. La asignación, solución, transiciones auditadas, cierre, reapertura y notificaciones que se describen a continuación son la especificación objetivo; no deben presentarse como funcionalidad terminada. El `PUT /tickets/{id}` actual es una actualización básica sin la máquina de estados ni auditoría, por lo que queda fuera de la demo.
+
 
 ## 1. Roles del Sistema y Modelo de Permisos
 El sistema tiene 4 roles basados en la tabla `ROLES` y el campo `is_leader`:

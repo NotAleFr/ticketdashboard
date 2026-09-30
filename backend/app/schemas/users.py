@@ -13,8 +13,8 @@ class UsuarioBase(BaseModel):
     is_leader: bool = False
 
 class UsuarioCreate(UsuarioBase):
-    #todo: check logic for ts
-    pass
+    # This UUID must already exist in Supabase Auth (auth.users).
+    id_usuario: UUID
 
 class UsuarioUpdate(BaseModel):
     """Todos los campos opcionales: solo se actualiza lo que se envíe."""

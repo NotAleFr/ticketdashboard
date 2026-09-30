@@ -1,7 +1,8 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    supabase_jwt_secret: str
+    supabase_jwt_secret: str | None = None
+    supabase_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env", 

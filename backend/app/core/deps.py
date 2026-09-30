@@ -39,14 +39,16 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="El token no contiene un identificador de usuario (sub)",
+            headers={"WWW-Authenticate": "Bearer"},
         )
         
     try:
         user_id = UUID(user_id_str)
-    except ValueError:
+    except (TypeError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="El 'sub' del token no es un UUID válido",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Buscar al usuario en la tabla USUARIOS usando el UUID
@@ -59,3 +61,15 @@ def get_current_user(
         )
         
     return user
+
+
+def require_admin(
+    usuario_actual: Usuario = Depends(get_current_user),
+) -> Usuario:
+    """Require an authenticated administrator for management operations."""
+    if usuario_actual.id_rol != 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requieren permisos de administrador",
+        )
+    return usuario_actual

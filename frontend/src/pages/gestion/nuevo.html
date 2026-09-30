@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuevo ticket</title>
+  <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
+</head>
+<body>
+  <main class="ticket-page">
+    <section class="ticket-page__shell">
+      <header class="ticket-page__header">
+        <a class="ticket-page__back" href="./gestion.html">← Tickets</a>
+        <h1>Nuevo ticket</h1>
+      </header>
+
+      <form id="ticket-form" class="whitebox columna ticket-page__form">
+        <label for="title">Título</label>
+        <input id="title" name="title" required maxlength="100" placeholder="Describe brevemente la incidencia">
+
+        <label for="description">Descripción</label>
+        <textarea id="description" name="description" required rows="5" placeholder="Explica qué sucede y desde cuándo"></textarea>
+
+        <label for="classroom">Aula o laboratorio</label>
+        <select id="classroom" name="classroom" required><option value="">Cargando aulas…</option></select>
+
+        <label for="equipment">Equipo (opcional)</label>
+        <select id="equipment" name="equipment">
+          <option value="">Incidencia general del aula</option>
+        </select>
+
+        <fieldset>
+          <legend>Categorías del problema</legend>
+          <div id="problem-types">Cargando categorías…</div>
+        </fieldset>
+
+        <p id="form-message" role="status"></p>
+        <button id="submit-ticket" class="btn" type="submit">Crear ticket</button>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="./nuevo.js"></script>
+</body>
+</html>

@@ -10,15 +10,15 @@ El sistema se estructura en tres componentes principales:
 
 1. **Frontend (`/frontend`):**
    - **Tecnologías:** HTML5, CSS3, JavaScript Vanilla (ES Modules) con **Vite**.
-   - **Función:** Interfaz gráfica para todos los roles (inicio de sesión, formulario de tickets, bandejas de asignación y paneles de administración). Gestiona la sesión del usuario mediante el cliente de Supabase Auth y se comunica con el backend mediante peticiones HTTP.
+   - **Función:** Interfaz gráfica para inicio de sesión, panel y creación/listado de tickets. Gestiona la sesión mediante el cliente de Supabase Auth y se comunica con el backend mediante peticiones HTTP autenticadas.
 
 2. **Backend (`/backend`):**
    - **Tecnologías:** Python, **FastAPI**, **SQLAlchemy** (ORM), Pydantic v2.
-   - **Función:** Expone la API REST, centraliza toda la lógica de negocio, valida permisos por rol, administra los cambios de estado de los tickets, sincroniza el estado de los equipos y coordina las notificaciones.
+   - **Función:** Expone la API REST, centraliza validación y autorización por rol, y crea/consulta tickets. La automatización completa de cambios de estado, auditoría, equipos y notificaciones sigue pendiente.
 
 3. **Plataforma y Base de Datos (Supabase):**
    - **Tecnologías:** **PostgreSQL**, **Supabase Auth**, **SMTP**.
-   - **Función:** Aloja la base de datos relacional con Row Level Security (RLS), gestiona la autenticación segura y emisión de tokens JWT, y provee el servicio de correos para notificaciones externas.
+   - **Función:** Aloja la base de datos relacional con Row Level Security (RLS), gestiona la autenticación segura y emisión de tokens JWT. Las notificaciones por correo son una decisión de arquitectura pendiente de implementación.
 
 
 ## 2. Estructura del Repositorio
@@ -75,7 +75,7 @@ API 2/
      Authorization: Bearer <jwt_token>
      ```
 3. **Validación en FastAPI (`get_current_user`):**
-   - Un middleware/dependencia FastAPI verifica la firma del JWT usando la clave secreta o JWKS de Supabase.
+   - Una dependencia FastAPI identifica el algoritmo del JWT. Los tokens actuales ES256 se verifican contra el JWKS público de `SUPABASE_URL/auth/v1/.well-known/jwks.json`; HS256 queda solo como compatibilidad para proyectos heredados configurados con `SUPABASE_JWT_SECRET`.
    - Extrae el `sub` (UUID del usuario en `auth.users`).
    - Consulta `public.USUARIOS` para obtener el perfil completo (`id_rol`, `is_leader`, `laboratorio_asignado_id`).
    - Inyecta el usuario autenticado en la función del endpoint para evaluar permisos antes de procesar la lógica.
@@ -94,3 +94,11 @@ API 2/
   * `404 Not Found`: Recurso inexistente.
 * **Documentación Interactiva:**
   * Accesible en desarrollo en `http://localhost:8000/docs` (Swagger UI).
+
+---
+
+## 5. Alcance actual de la demo
+
+La demo integrada cubre login con Supabase Auth, propagación del access token al header `Authorization: Bearer`, validación ES256 mediante JWKS, validación del perfil de aplicación y creación/listado/filtrado de tickets. FastAPI protege las rutas de tickets, aulas, equipos y categorías de problema; las mutaciones de aulas y equipos requieren rol administrador. La interfaz de tickets muestra estados claros de carga, vacío y error, y se adapta a pantallas pequeñas conservando el acceso horizontal a la tabla.
+
+El ciclo completo definido en ADR 0004 (asignación de técnicos, registro de solución, transiciones lineales auditadas, cierre/reapertura y notificaciones) es arquitectura acordada, no funcionalidad terminada. La documentación de esa ADR no debe interpretarse como evidencia de que esas operaciones ya existen en los endpoints. Aunque existe un `PUT /tickets/{id}` básico, no aplica estas reglas de ciclo de vida y no forma parte del flujo de demostración.
