@@ -1,79 +1,68 @@
-# Computer Lab Ticket Management
+# Sistema Web de Gestión de Tickets para Laboratorios de Cómputo
 
-A Vite frontend and FastAPI backend for reporting computer-lab incidents. Supabase Auth owns browser login and PostgreSQL stores application data; the frontend talks to the database only through FastAPI.
+Sistema de gestión de tickets para el soporte técnico de los laboratorios de cómputo. El frontend usa Supabase Auth para iniciar sesión y FastAPI para acceder a PostgreSQL en Supabase.
 
-## Demo-ready flow
+### Backend (`/backend`)
 
-1. Sign in with a pre-provisioned Supabase Auth user that also has a matching `USUARIOS` profile.
-2. The dashboard requests `GET /tickets/` with `Authorization: Bearer <access token>`.
-3. Open **Ticket management**, create a ticket, select an active classroom, optional equipment, and one or more problem categories.
-4. FastAPI validates the Supabase ES256 access token against the project's public JWKS, resolves the matching application profile, and validates the classroom/equipment relationship and categories before writing the ticket.
+- Python, FastAPI y SQLAlchemy.
+- PostgreSQL y Auth en el proyecto compartido de Supabase.
 
-The current demo supports authenticated ticket listing, creation, filtering, and a responsive Spanish ticket UI. The complete technician-assignment, solution, audited-transition, close/reopen, and notification lifecycle described in ADR 0004 is planned work, not yet implemented or demonstrated.
+### Frontend (`/frontend`)
 
-## Run locally
+- Vite, HTML, CSS y JavaScript.
+- El proxy local `/api` reenvía las peticiones a FastAPI.
 
-### Prerequisites
+## Inicio local
 
-- Python 3.11+ and Node.js 20+.
-- A Supabase project with its PostgreSQL database and Auth enabled.
-- A confirmed Supabase Auth user with a matching `USUARIOS` profile to exercise the browser flow.
+Solicita al equipo los valores actuales de los archivos `.env`; no los agregues al repositorio ni los compartas en mensajes.
+Abre dos terminales de PowerShell desde la raíz del repositorio.
 
-Open two PowerShell terminals at the repository root. Start the backend first, then the frontend.
-
-### Backend
-
-Create a virtual environment, install dependencies, then copy and configure the local environment file:
+### 1. Backend
 
 ```powershell
 cd backend
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt pytest
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Set these values in `backend/.env`:
+En `backend/.env` configura los valores proporcionados por el equipo:
 
 ```dotenv
-DATABASE_URL=postgresql+psycopg2://postgres:[URL-ENCODED-PASSWORD]@[HOST]:[PORT]/postgres
+DATABASE_URL=postgresql+psycopg2://...
 SUPABASE_URL=https://[PROJECT-REF].supabase.co
 ```
 
-Use the connection URI supplied by **Supabase Dashboard → Connect**. If the direct database host is unreachable on the local network, use the **Session Pooler** URI. URL-encode reserved password characters (for example, `@` becomes `%40`). Keep database credentials in the backend only.
-
-Supabase's current ES256 access tokens are verified with the public JWKS published at `SUPABASE_URL/auth/v1/.well-known/jwks.json`; the backend does not need a JWT secret for that path. `SUPABASE_JWT_SECRET` remains an optional compatibility setting only for legacy HS256 tokens.
+Inicia la API:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Confirm it is running at `http://127.0.0.1:8000/test-db`.
+Confirma que responde en `http://127.0.0.1:8000/test-db`.
 
-### Frontend
+### 2. Frontend
 
-In the second terminal, create `frontend/.env` with public browser configuration only:
-
-```dotenv
-# Local Vite development uses the proxy in frontend/vite.config.js.
-VITE_API_URL=/api
-VITE_SUPABASE_URL=https://[PROJECT-REF].supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
-
-Never place the Supabase service-role key, database password, or JWT secret in this file. When the frontend is deployed separately from Vite, set `VITE_API_URL` to the public HTTPS FastAPI URL instead of `/api`.
+En la segunda terminal:
 
 ```powershell
 cd frontend
 npm ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 npm run dev -- --host 127.0.0.1
 ```
 
-Open `http://127.0.0.1:5173`. Vite forwards local `/api/*` requests to FastAPI, so both processes must stay running during browser testing.
+En `frontend/.env` usa el proyecto compartido de Supabase y conserva esta ruta local:
 
-## Verify before testing in the browser
+```dotenv
+VITE_API_URL=/api
+VITE_SUPABASE_URL=https://[PROJECT-REF].supabase.co
+VITE_SUPABASE_ANON_KEY=...
+```
 
-Run these commands from separate terminals after both dependency installs complete:
+Abre `http://127.0.0.1:5173`. Mantén backend y frontend encendidos durante las pruebas.
+
+## Pruebas
 
 ```powershell
 # Backend
@@ -86,24 +75,16 @@ npm test -- --run
 npm run build
 ```
 
-For a presentation dataset, run the idempotent seed command in [Demo data](#demo-data) with the UUID of an existing confirmed Auth user. Then sign in through the browser and create a ticket.
+## Datos compartidos de Supabase
 
-## Authentication troubleshooting
+- Usa una cuenta de Auth confirmada que tenga un perfil correspondiente en `USUARIOS`.
 
-A `401 Unauthorized` means FastAPI did not receive a valid bearer token. Verify that the frontend and backend point at the same Supabase project and that the backend can reach its JWKS endpoint. A valid Supabase Auth user without a matching `USUARIOS` profile receives `404`, which indicates that provisioning/seed data is incomplete rather than that the password is wrong.
+## Alcance actual
 
-## Demo data
+La demo permite iniciar sesión, listar y filtrar tickets, y crear tickets con aula, equipo opcional y categorías. La asignación de técnicos, soluciones, transiciones auditadas, cierre/reapertura y notificaciones siguen pendientes.
 
-Run the idempotent preparation script after creating a confirmed Supabase Auth user. It adds the two API-required profile fields when absent, ensures the roles, presentation classroom, equipment, and categories exist, links that existing Auth UUID as an Administrator profile, and creates two sample tickets. It never creates an Auth identity or prints credentials.
+## Estructura del proyecto
 
-```powershell
-cd backend
-python scripts/prepare_demo_data.py --auth-user-id <UUID>
-```
-
-## Project layout
-
-- `/frontend` — Vite client, Supabase session handling, and ticket UI.
-- `/backend` — FastAPI endpoints, authorization, validation, and SQLAlchemy models.
-- `/database` — Supabase schema.
-- `/docs` — architecture, domain rules, and architecture decisions.
+- `/frontend` - Aplicación cliente.
+- `/backend` - API REST y lógica de negocio.
+- `/docs` - Arquitectura y reglas de negocio.
