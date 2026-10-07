@@ -25,7 +25,7 @@ body {
   padding: 0;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #F8F9FA;
-  background-image: url('../../../public/imgs/sedewraergerag.png');
+  background-image: url('/imgs/sedewraergerag.png');
   background-size: 25%;
   color: var(--text-primary);
 }
