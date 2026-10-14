@@ -59,6 +59,10 @@ pnpm-debug.log*
 # Supabase
 .supabase/
 
+# Local test-account credentials; do not commit
+/docs/test-accounts.local.md
+/docs/local/
+
 # Editor and OS
 .idea/
 .vscode/

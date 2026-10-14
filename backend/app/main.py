@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.db.database import get_db
-from app.routers import tickets, usuarios, aulas
+from app.routers import tickets, usuarios, aulas, reportes
 
 app = FastAPI(title="API - Sistema de Gestión de Tickets")
 
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(tickets.router)
 app.include_router(usuarios.router)
 app.include_router(aulas.router)
+app.include_router(reportes.router)
 
 
 @app.get("/")

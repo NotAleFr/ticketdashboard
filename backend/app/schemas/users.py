@@ -31,3 +31,16 @@ class UsuarioRead(UsuarioBase):
     fecha_registro: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UsuarioAdminRead(UsuarioRead):
+    estado: str
+    ultimo_acceso: Optional[datetime] = None
+
+
+class UsuarioProvisionado(UsuarioRead):
+    password_temporal: str
+
+
+class UsuarioEstadoUpdate(BaseModel):
+    suspendido: bool

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración de usuarios - Soporte Universitario</title>
+  <link rel="icon" type="image/x-icon" href="../../../public/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+    rel="stylesheet">
+
+  <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
+  <link href="./usuarios.css" rel="stylesheet" type="text/css" media="all">
+  <link href="./usuarios-functional.css" rel="stylesheet">
+</head>
+
+<body class="usuarios-body">
+  <div class="usuarios-wrapper">
+    <main class="usuarios-container" aria-label="Panel de Administración de Usuarios">
+
+      <header class="usuarios-header">
+        <div class="header-left">
+          <a href="./reportes.html" class="btn-volver" title="Volver a reportes" aria-label="Volver">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </a>
+          <h1 class="header-title">Administración de usuarios</h1>
+        </div>
+
+        <button type="button" class="btn-add-user" disabled title="Crear un nuevo usuario">
+          <span class="plus-sign">+</span>
+          <span>Nuevo usuario</span>
+        </button>
+      </header>
+
+      <section class="filters-search-bar" aria-label="Filtros y búsqueda de usuarios">
+        <div class="filter-dropdown-wrapper">
+          <select class="filter-select" aria-label="Filtrar por rol">
+            <option value="todos" selected>Rol: todos</option>
+            <option value="administrador">Administrador</option>
+            <option value="lider-lab">Líder de Laboratorio</option>
+            <option value="tecnico">Técnico de soporte</option>
+            <option value="docente">Docente</option>
+          </select>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="1 1 5 5 9 1"></polyline>
+          </svg>
+        </div>
+
+        <div class="filter-dropdown-wrapper">
+          <select class="filter-select" aria-label="Filtrar por estado">
+            <option value="todos" selected>Estado: todos</option>
+            <option value="activo">Activo</option>
+            <option value="invitado">Invitado</option>
+            <option value="suspendido">Suspendido</option>
+          </select>
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="1 1 5 5 9 1"></polyline>
+          </svg>
+        </div>
+
+        <div class="search-input-wrapper">
+          <input type="text" class="search-input" placeholder="Buscar por nombre o correo..."
+            aria-label="Buscar usuarios por nombre o correo">
+        </div>
+      </section>
+
+      <section class="user-table-card" aria-label="Listado de usuarios">
+        <div class="table-responsive">
+          <table class="user-table">
+            <thead>
+              <tr>
+                <th class="th-usuario">USUARIO</th>
+                <th class="th-correo">CORREO</th>
+                <th class="th-rol">ROL</th>
+                <th class="th-estado">ESTADO</th>
+                <th class="th-acceso">ÚLTIMO ACCESO</th>
+                <th class="th-acciones">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody id="users-body"><tr><td colspan="6">Cargando usuarios...</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <p class="table-footer-text">Cargando usuarios...</p>
+        </div>
+      </section>
+
+      <section hidden class="user-detail-card" aria-label="Detalle del usuario seleccionado">
+        <div class="detail-header">
+          <div class="detail-identity">
+            <div class="avatar-circle" aria-hidden="true">LM</div>
+            <div class="identity-info">
+              <h2 class="identity-name">Lucía Martínez</h2>
+              <span class="identity-code">USR-004</span>
+            </div>
+          </div>
+
+          <div class="detail-status-badges">
+            <span class="badge-role lider">Líder Lab</span>
+            <span class="badge-status activo">Activa</span>
+          </div>
+        </div>
+
+        <div class="detail-metadata-grid">
+          <div class="metadata-col">
+            <div class="metadata-item">
+              <span class="metadata-label">Correo:</span>
+              <span class="metadata-value">lucia.martinez@unison.mx</span>
+            </div>
+            <div class="metadata-item">
+              <span class="metadata-label">Teléfono:</span>
+              <span class="metadata-value">+34 612 438 920</span>
+            </div>
+            <div class="metadata-item">
+              <span class="metadata-label">Lab. asignado:</span>
+              <span class="metadata-value">Aula 5J-CO203</span>
+            </div>
+          </div>
+
+          <div class="metadata-col">
+            <div class="metadata-item">
+              <span class="metadata-label">Líder de Lab:</span>
+              <span class="metadata-value">Sí (is_leader)</span>
+            </div>
+            <div class="metadata-item">
+              <span class="metadata-label">Último acceso:</span>
+              <span class="metadata-value">09/09/2026 · 08:42</span>
+            </div>
+            <div class="metadata-item">
+              <span class="metadata-label">Alta:</span>
+              <span class="metadata-value">14/02/2024</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-activity-section">
+          <p class="activity-title">Actividad reciente</p>
+          <div class="activity-list">
+            <div class="activity-item">
+              <span class="activity-marker" aria-hidden="true"></span>
+              <span class="activity-time">Hoy, 08:42</span>
+              <span class="activity-desc">Inicio de sesión correcto</span>
+            </div>
+            <div class="activity-item">
+              <span class="activity-marker" aria-hidden="true"></span>
+              <span class="activity-time">08/09, 16:18</span>
+              <span class="activity-desc">Actualizó permisos de usuarios</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-divider" aria-hidden="true"></div>
+
+        <div class="detail-actions-row">
+          <button type="button" class="btn-detail-action">Editar usuario</button>
+          <button type="button" class="btn-detail-action">Restablecer contraseña</button>
+          <button type="button" class="btn-detail-action">Cambiar rol</button>
+          <button type="button" class="btn-detail-action btn-detail-danger">Suspender cuenta</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+<template id="user-row-template"><tr>
+                <td class="td-usuario">Laura Gómez</td>
+                <td class="td-correo">laura.gomez@unison.mx</td>
+                <td>
+                  <span class="badge-role administrador">Administrador</span>
+                </td>
+                <td>
+                  <span class="badge-status activo">Activo</span>
+                </td>
+                <td class="td-acceso">Hoy, 08:42</td>
+                <td class="td-acciones">
+                  <div class="actions-group">
+                    <button type="button" class="btn-icon-action" title="Editar usuario Laura Gómez"
+                      aria-label="Editar usuario">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                      </svg>
+                    </button>
+                    <button type="button" class="btn-icon-action" title="Más opciones" aria-label="Más opciones">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr></template>
+<dialog id="user-dialog" aria-labelledby="user-dialog-title">
+  <form id="user-form">
+    <h2 id="user-dialog-title">Editar usuario</h2>
+    <div id="user-fields">
+      <label>Nombre<input name="nombre" required maxlength="50" autocomplete="given-name"></label>
+      <label>Apellido<input name="apellido" required maxlength="50" autocomplete="family-name"></label>
+      <label>Correo<input name="email" type="email" required maxlength="100" autocomplete="email"></label>
+      <label>Tel&#233;fono<input name="telefono" maxlength="20" autocomplete="tel"></label>
+      <label>Rol<select name="rol"><option value="3">Docente</option><option value="2">T&#233;cnico de soporte</option><option value="lider">L&#237;der de Laboratorio</option><option value="1">Administrador</option></select></label>
+      <label>Laboratorio<select name="laboratorio"><option value="">Sin asignar</option></select></label>
+    </div>
+    <p id="user-dialog-message" role="status" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn-detail-action" id="cancel-user-dialog">Cancelar</button>
+      <button type="submit" class="btn-detail-action" id="save-user">Guardar</button>
+    </div>
+  </form>
+</dialog>
+<script type="module" src="./usuarios.js"></script>
+</body>
+
+</html>

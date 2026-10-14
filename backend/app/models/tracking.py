@@ -4,7 +4,7 @@ from sqlalchemy.sql import func
 from app.db.database import Base
 
 class HistorialEstado(Base):
-    __tablename__ = "HISTORIAL_ESTADO"
+    __tablename__ = "historial_estado"
 
     id_historial = Column(Integer, primary_key=True, index=True)
     estado_anterior = Column(String(30), nullable=False)
@@ -12,11 +12,11 @@ class HistorialEstado(Base):
     fecha_cambio = Column(DateTime(timezone=True), server_default=func.now())
     
     # FKs
-    id_ticket = Column(ForeignKey("TICKETS.id_ticket", ondelete="CASCADE"), nullable=False)
-    id_usuario = Column(ForeignKey("USUARIOS.id_usuario", ondelete="RESTRICT"), nullable=False)
+    id_ticket = Column(ForeignKey("tickets.id_ticket", ondelete="CASCADE"), nullable=False)
+    id_usuario = Column(ForeignKey("usuarios.id_usuario", ondelete="RESTRICT"), nullable=False)
 
 class Notificacion(Base):
-    __tablename__ = "NOTIFICACIONES"
+    __tablename__ = "notificaciones"
 
     id_notificacion = Column(Integer, primary_key=True, index=True)
     mensaje = Column(String(255), nullable=False)
@@ -24,16 +24,16 @@ class Notificacion(Base):
     fecha = Column(DateTime(timezone=True), server_default=func.now())
 
     # FKs
-    id_ticket = Column(ForeignKey("TICKETS.id_ticket", ondelete="CASCADE"), nullable=False)
-    id_usuario = Column(ForeignKey("USUARIOS.id_usuario", ondelete="CASCADE"), nullable=False)
+    id_ticket = Column(ForeignKey("tickets.id_ticket", ondelete="CASCADE"), nullable=False)
+    id_usuario = Column(ForeignKey("usuarios.id_usuario", ondelete="CASCADE"), nullable=False)
 
 class Solucion(Base):
-    __tablename__ = "SOLUCIONES"
+    __tablename__ = "soluciones"
 
     id_solucion = Column(Integer, primary_key=True, index=True)
     texto = Column(Text, nullable=False)
     fecha = Column(DateTime(timezone=True), server_default=func.now())
 
     # FKs
-    id_ticket = Column(ForeignKey("TICKETS.id_ticket", ondelete="CASCADE"), nullable=False)
-    id_usuario = Column(ForeignKey("USUARIOS.id_usuario", ondelete="RESTRICT"), nullable=False)
+    id_ticket = Column(ForeignKey("tickets.id_ticket", ondelete="CASCADE"), nullable=False)
+    id_usuario = Column(ForeignKey("usuarios.id_usuario", ondelete="RESTRICT"), nullable=False)

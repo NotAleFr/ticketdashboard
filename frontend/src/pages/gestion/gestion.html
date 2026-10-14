@@ -1,66 +1,187 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="es">
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tickets</title>
-    <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
-    <link rel="icon" type="image/x-icon" href="./imgs/LOGO-OJO-BUHO-AMARILLO.png">
-    <!-- Esto es para conectarse a la fuente-->
+    <meta name="description" content="Consulta y administra los tickets de soporte de laboratorio.">
+    <title>Gestión de tickets</title>
+    <link rel="icon" type="image/x-icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-    <!-- Si lo quieren quitar, descarguen y coloquen la fuente en el proyecto -->      
-</head>
-<body>
-    <div class="ma columna" style="height: 100%;width: 100%;">
-        <div class="ma columna azulCover2 cointainer"  style="position: relative; display: flex; flex-wrap: wrap; align-items: stretch; ">
-             <div class="fila ma " style="width: 100%;padding: 0px; box-sizing: border-box" ><img src="./imgs/iconos/arrowback.svg"  style="margin-left: 0%; margin-right: 2rem;" class="ma" alt=""> <p  class="ma" style="color: white; margin-left: 0; font-size: 2rem; font-weight: 600;">Gestion de tickets</p>
-            <a class="ma" href="./nuevo.html" style="margin-right: 0rem;"><input class="btn" style="width: 100%; border-radius: 20rem; font-weight: 700;" type="button" value="+ Nuevo Ticket"></a>
-              
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet">
+    <link rel="stylesheet" href="./gestion.css">
+  </head>
+  <body class="gestion-page">
+    <main class="ticket-shell">
+      <header class="page-header">
+        <a class="back-button" href="../../../dashboard.html" aria-label="Volver al panel principal">
+          <img src="/imgs/iconos/arrowback.svg" alt="">
+        </a>
+        <h1>Gestión de tickets</h1>
+        <a class="new-ticket-button" href="./nuevo.html">
+          <span class="new-ticket-button__plus" aria-hidden="true">+</span>
+          Nuevo ticket
+        </a>
+      </header>
+
+      <section class="filters" aria-label="Filtros de tickets">
+        <label class="visually-hidden" for="status-filter">Filtrar por estado</label>
+        <select id="status-filter" class="filter-control">
+          <option value="">Estado: todo</option>
+          <option value="Abierto">Estado: abierto</option>
+          <option value="En Proceso">Estado: en proceso</option>
+          <option value="Resuelto">Estado: resuelto</option>
+          <option value="Cerrado">Estado: cerrado</option>
+        </select>
+
+        <label class="visually-hidden" for="classroom-filter">Filtrar por aula</label>
+        <select id="classroom-filter" class="filter-control">
+          <option value="">Aula: todas</option>
+        </select>
+
+        <label class="visually-hidden" for="ticket-search">Buscar tickets</label>
+        <input
+          id="ticket-search"
+          class="filter-control search-control"
+          type="search"
+          placeholder="Buscar ticket..."
+          autocomplete="off"
+        >
+      </section>
+
+      <section class="ticket-table-card" aria-label="Lista de tickets">
+        <div class="table-scroll">
+          <table class="ticket-table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Aula / equipo</th>
+                <th scope="col">Problema</th>
+                <th scope="col">Reportado por</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Responsable</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tickets-body"></tbody>
+          </table>
+        </div>
+
+        <p id="tickets-message" class="tickets-message" role="status" aria-live="polite">
+          Cargando tickets...
+        </p>
+
+        <footer class="table-footer">
+          <span id="tickets-count">Cargando...</span>
+          <button id="refresh-tickets" class="refresh-button" type="button">
+            Actualizar
+          </button>
+        </footer>
+      </section>
+
+      <section class="ticket-details" aria-labelledby="details-heading">
+        <header class="details-header">
+          <h2 id="details-heading">Detalle del ticket seleccionado</h2>
+          <span id="detail-id" class="details-id">—</span>
+        </header>
+
+        <p id="detail-empty" class="detail-empty">
+          Selecciona un ticket de la lista para ver sus detalles.
+        </p>
+
+        <div id="detail-content" hidden>
+          <dl class="details-grid">
+            <div class="detail-item">
+              <dt>Aula</dt>
+              <dd id="detail-classroom">—</dd>
             </div>
-             <div class="fila ma"  style="width: 100%; box-sizing: border-box; padding: 0px; margin-bottom: .5rem;">
-                <select name="" id="">
-                    <option value="todo">Estado: todo</option>
-                </select>
-                <select name="" id="">
-                    <option value="toda">Prioridad: toda</option>
-                </select>
-                <select name="" id="">
-                    <option value="todas">Aula: todas</option>
-                </select>
-                <input type="text" name="" id="" placeholder="Buscar Texto" style="width: 1000%; margin: 0%;">
-             </div>
-             <div class="m0 whitebox tablatop" style="">Detalle del Ticket</div>
-             <div class="ma columna whitebox" style="overflow: scroll;  width: 100%; box-sizing: border-box; padding: 0px;flex-grow: 1; height: auto; border-radius: 0%;">
-                <tr></tr>
-             </div>
-             <div class="m0 whitebox tablabot" style=><span class="gris">6 tickets</span></div>
-             
-            <div class="m0 whitebox tablatop" >Detalle del Ticket</div>
-            <div class="ma columna whitebox" style=" width: 100%; box-sizing: border-box; ; height: 18rem;border-top-left-radius: 0%;  border-top-right-radius: 0%; padding: 1rem; padding-top: 0%;">
-                <div class="" style="padding: 0%; align-items: start; flex-grow: 1;">
-                <div style="height: 100%; float: left ;" class="columna">
-                    <h4><span class="gris">Aula: </span>5J-CO202</h4>
-                    <h4><span class="gris">Reportado por: </span> Prof. Sánchez</h4>
-                    <h4><span class="gris">Descripcion: </span> Teclado USB no responde. Se probó en otro equipo y tampoco.</h4>
-                    <h4><span class="gris">Prihoridad: </span><span class="estadosmall estverde">Baja</span></h4>
-                    <h3><span class="gris">Historial: </span></h3>
-                    <h4><span class="gris">⏲ 25/08 09:00 </span>- creado</h4>
-                    <h4><span class="gris">⏲ 25/08 14:20 </span>- asignado a técnico</h4>
-                </div>
-                <div style="height: 100%; float: right; padding: 1rem;" class="columna ">
-                    <h4><span class="gris">Equipo: </span>PC-10</h4>
-                    <h4><span class="gris">Fecha 25/08/2026 </span>- creado</h4>
-                    <h4><span class="gris">Estado: </span><span class="estadosmall estamarillo">En progreso</span></h4>
-                </div>
-                </div>
-            <div class="" >
-                <input class="btnsmall"  type="button" value="Asignar responsable">
-                <input class="btnsmall"  type="button" value="Cambiar estado">
-                <input class="btnsmall"type="button" value="Cambiar prihoridad">
-                <input class="btnsmall btnred"  type="button" value="Cerrar ticket">
-             </div>
-    </div>
-</body>
+            <div class="detail-item">
+              <dt>Equipo</dt>
+              <dd id="detail-equipment">—</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Reportado por</dt>
+              <dd id="detail-reporter">—</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Fecha</dt>
+              <dd id="detail-date">—</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Estado</dt>
+              <dd id="detail-status">—</dd>
+            </div>
+            <div class="detail-item">
+              <dt>Responsable</dt>
+              <dd id="detail-assignee">—</dd>
+            </div>
+          </dl>
+
+          <div class="detail-description">
+            <h3 id="detail-title">Problema</h3>
+            <p id="detail-description-text"></p>
+          </div>
+
+          <div class="history-section">
+            <h3>Historial</h3>
+            <p id="detail-history" class="history-empty">
+              El historial todavía no está incluido en la respuesta de la API.
+            </p>
+          </div>
+
+          <div class="detail-actions" aria-label="Acciones del ticket">
+            <button id="assign-ticket-button" type="button" hidden>
+              Asignar responsable
+            </button>
+            <button id="change-ticket-state-button" type="button" hidden>
+              Cambiar estado
+            </button>
+            <button id="close-ticket-button" class="close-ticket-button" type="button" hidden>
+              Cerrar ticket
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <p id="action-feedback" class="action-feedback" role="status" aria-live="polite" hidden></p>
+    </main>
+
+    <dialog id="ticket-action-dialog" class="ticket-dialog" aria-labelledby="action-dialog-title">
+      <form id="ticket-action-form" method="dialog">
+        <header class="ticket-dialog__header">
+          <h2 id="action-dialog-title">Acción del ticket</h2>
+          <button class="ticket-dialog__icon-button" type="button" data-close-dialog aria-label="Cerrar">×</button>
+        </header>
+        <div id="action-dialog-fields" class="ticket-dialog__fields"></div>
+        <p id="action-dialog-error" class="ticket-dialog__error" role="alert" hidden></p>
+        <footer class="ticket-dialog__footer">
+          <button class="ticket-dialog__button" type="button" data-close-dialog>Cancelar</button>
+          <button id="action-dialog-submit" class="ticket-dialog__button ticket-dialog__button--primary" type="submit">
+            Guardar
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="close-ticket-dialog" class="ticket-dialog" aria-labelledby="close-dialog-title">
+      <form id="close-ticket-form" method="dialog">
+        <header class="ticket-dialog__header">
+          <h2 id="close-dialog-title">Cerrar ticket</h2>
+          <button class="ticket-dialog__icon-button" type="button" data-close-dialog aria-label="Cerrar">×</button>
+        </header>
+        <p class="ticket-dialog__description">Confirma que la solución quedó verificada para cerrar este ticket.</p>
+        <p id="close-dialog-error" class="ticket-dialog__error" role="alert" hidden></p>
+        <footer class="ticket-dialog__footer">
+          <button class="ticket-dialog__button" type="button" data-close-dialog>Cancelar</button>
+          <button id="close-dialog-submit" class="ticket-dialog__button ticket-dialog__button--danger" type="submit">
+            Confirmar cierre
+          </button>
+        </footer>
+      </form>
+    </dialog>
+
+    <script type="module" src="./gestion.js"></script>
+  </body>
 </html>

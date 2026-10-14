@@ -25,7 +25,7 @@ body {
   padding: 0;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #F8F9FA;
-  background-image: url('../../../public/imgs/sedewraergerag.png');
+  background-image: url('/imgs/sedewraergerag.png');
   background-size: 25%;
   color: var(--text-primary);
 }
@@ -244,6 +244,10 @@ body {
   border-color: #CBD5E1;
 }
 
+#report-users-link[hidden] {
+  display: none;
+}
+
 .btn-filter-apply {
   background-color: var(--prmario2);
   color: #FFFFFF;
@@ -445,17 +449,14 @@ body {
 }
 
 .bar-pillar.pendiente {
-  height: 38px;
   background-color: var(--color-pendiente);
 }
 
 .bar-pillar.en-proceso {
-  height: 74px;
   background-color: var(--color-en-proceso);
 }
 
 .bar-pillar.resuelto {
-  height: 118px;
   background-color: var(--color-resuelto);
 }
 
@@ -508,22 +509,18 @@ body {
 }
 
 .fill-aula-1 {
-  width: 70%;
   background-color: #0EA5E9;
 }
 
 .fill-aula-2 {
-  width: 58%;
   background-color: #06B6D4;
 }
 
 .fill-aula-3 {
-  width: 46%;
   background-color: #14B8A6;
 }
 
 .fill-aula-4 {
-  width: 85%;
   background-color: #3B82F6;
 }
 
@@ -926,4 +923,58 @@ body {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+/* Dynamic report values use the supplied cards, colors and table layout. */
+.report-message { margin: 0; color: white; font-size: 12px; }
+.report-message:empty { display: none; }
+.filters-actions { flex-wrap: wrap; }
+.bar-chart-body { gap: 26px; }
+.bar-pillar.cerrado { background-color: #64748B; }
+.bar-value.cerrado { color: #64748B; }
+.badge-cerrado { background-color: #E2E8F0; color: #475569; }
+.horizontal-chart-body { max-height: 162px; overflow-y: auto; justify-content: flex-start; }
+.h-bar-label { width: 90px; overflow-wrap: anywhere; }
+.h-bar-row { flex-shrink: 0; }
+#report-pages { display: flex; align-items: center; gap: 6px; }
+.pagination-controls { flex-wrap: wrap; }
+button:disabled, select:disabled { opacity: 0.5; cursor: default; }
+.reportes-header { flex-wrap: wrap; }
+#report-users-link { margin-left: auto; }
+.table-responsive { min-height: 0; overflow-y: auto; flex: 1; }
+.table-card { min-height: 140px; }
+.table-pagination { flex-shrink: 0; min-height: 45px; }
+.tickets-table { --report-row-height: 45px; table-layout: fixed; min-width: 960px; }
+.tickets-table tbody tr { height: var(--report-row-height); }
+.tickets-table td { line-height: 14px; }
+.tickets-table th.th-id { width: 64px; }
+.tickets-table th.th-acciones { width: 90px; }
+.td-id .report-cell-text { display: block; white-space: nowrap; overflow-wrap: normal; }
+.chart-card { min-width: 0; }
+.report-cell-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-height: 28px; overflow-wrap: anywhere; }
+#ticket-detail { width: min(580px, calc(100% - 32px)); max-height: 85vh; overflow: auto; border: 1px solid var(--border-subtle); border-radius: 14px; padding: 22px; color: var(--text-primary); font-family: inherit; background: white; }
+#ticket-detail::backdrop { background: rgba(15, 23, 42, 0.45); }
+.detail-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detail-header h2 { margin: 0; font-size: 18px; }
+#ticket-detail-fields { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; font-size: 13px; }
+#ticket-detail-fields dt { color: var(--text-muted); }
+#ticket-detail-fields dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (min-width: 1101px) {
+  .table-card { flex: 1; min-height: 140px; }
+  .table-responsive { flex: 1; }
+  .table-pagination { flex-shrink: 0; }
+  .reportes-container { height: calc(100vh - 32px); }
+  .reportes-container { overflow-y: auto; }
+}
+@media (max-width: 640px) {
+  .bar-chart-body { gap: 10px; }
+  .bar-col { flex: 1; width: auto; min-width: 0; }
+  .bar-pillar { width: 32px; }
+  .filters-actions { gap: 6px; }
+}
+@media (max-width: 360px) {
+  .bar-label { font-size: 10px; white-space: normal; text-align: center; min-height: 24px; }
+}
+@media (max-width: 1100px) {
+  .table-card { height: calc(100dvh - 32px); flex: none; }
+  .table-pagination { min-height: 72px; }
 }

@@ -12,7 +12,7 @@ html {
 
 
 body {
-    background-image: url(../../../public/imgs/sedewraergerag.png);
+    background-image: url(/imgs/sedewraergerag.png);
     background-size: 25%;
     font-family: "Inter", sans-serif;
     font-optical-sizing: auto;
