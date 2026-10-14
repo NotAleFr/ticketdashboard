@@ -16,6 +16,7 @@ from app.schemas.tickets import (
     TipoProblemaRead,
 )
 from app.services.ticket_service import ticket_service
+from app.services.report_service import limitar_tickets
 
 def usuario_puede_ver_ticket(ticket: Ticket, usuario: Usuario) -> bool:
     # El administrador tiene acceso global.
@@ -54,27 +55,7 @@ def listar_tickets(
     )
 
 
-    # Administrador: ve todos los tickets.
-    if usuario_actual.id_rol == 1:
-        pass
-
-    # Maestro: ve solamente los tickets que creó.
-    elif usuario_actual.id_rol == 3:
-        query = query.filter(Ticket.id_usuario == usuario_actual.id_usuario)
-
-    # Líder: ve los de su aula. Técnico: solo los asignados a él.
-    elif usuario_actual.id_rol == 2:
-        if usuario_actual.is_leader:
-            query = query.filter(
-                Ticket.id_aula == usuario_actual.laboratorio_asignado_id
-            )
-        else:
-            query = query.filter(Ticket.id_tecnico == usuario_actual.id_usuario)
-    else:
-        raise HTTPException(
-            status_code=403,
-            detail="Tu rol no tiene permiso para consultar tickets",
-        )
+    query = limitar_tickets(query, usuario_actual)
 
     if estado:
         query = query.filter(Ticket.estado == estado)

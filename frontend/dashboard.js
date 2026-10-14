@@ -33,7 +33,7 @@ async function loadDashboard() {
       reportsTitle.textContent = 'Historial de reportes';
     }
 
-    // La administración solo se muestra al administrador; el módulo aún no está conectado.
+    // La administración solo se muestra al administrador.
     adminUsersCard.hidden = user.id_rol !== 1;
 
     const canViewReports = [1, 2, 3].includes(user.id_rol);

@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.db.database import get_db
 from app.models.usuarios import Usuario
@@ -58,4 +59,11 @@ def get_current_user(
             detail="Usuario autenticado no encontrado en la base de datos local",
         )
         
+    # A signed JWT may outlive a ban; enforce suspension on every API request.
+    if db.bind.dialect.name == "postgresql":
+        suspended = db.execute(text(
+            "SELECT banned_until > now() FROM auth.users WHERE id = :id"
+        ), {"id": str(user.id_usuario)}).scalar()
+        if suspended:
+            raise HTTPException(status_code=403, detail="La cuenta está suspendida")
     return user

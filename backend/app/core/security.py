@@ -36,6 +36,7 @@ def verify_token(token: str) -> dict:
             token,
             signing_key,
             algorithms=[algorithm],
+            leeway=5,  # Small clock differences between Supabase and the API host.
             options={"verify_aud": False},
         )
 
