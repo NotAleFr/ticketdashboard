@@ -350,3 +350,7 @@ a {
     margin-bottom: 1rem;
     background-color: rgb(243, 243, 243);
 }
+
+[hidden] {
+    display: none !important;
+}

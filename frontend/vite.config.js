@@ -5,7 +5,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: 'index.html', dashboard: 'dashboard.html',
-        login: 'src/pages/login/login.html', gestion: 'src/pages/gestion/gestion.html',
+        login: 'src/pages/login/login.html', recuperar: 'src/pages/login/recuperar.html',
+        nuevaContrasena: 'src/pages/login/nueva-contrasena.html',
+        gestion: 'src/pages/gestion/gestion.html',
         nuevo: 'src/pages/gestion/nuevo.html', reportes: 'src/pages/gestion/reportes.html',
         usuarios: 'src/pages/gestion/usuarios.html',
       },

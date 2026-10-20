@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva contraseña | Tickets</title>
+  <link href="./login.css" rel="stylesheet" type="text/css" media="all">
+  <link rel="icon" type="image/x-icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+  <!-- Esto es para conectarse a la fuente-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+    rel="stylesheet">
+  <!-- Si lo quieren quitar, descarguen y coloquen la fuente en el proyecto -->
+</head>
+
+<body>
+  <div class="ma columna" style="height: 100%;width: 100%;">
+    <div class="azulCover ma columna" style="height: 70%; width: 70%; position: relative; box-sizing: border-box">
+
+      <div class="whitebox ma columna" style="width: 100%; max-width: 30rem; box-sizing: border-box">
+
+        <p class="titulo">Nueva contraseña</p>
+
+        <!-- Estado inicial: se valida el enlace del correo -->
+        <p id="reset-checking" class="gris" role="status" aria-live="polite">Verificando enlace...</p>
+
+        <!-- Se muestra si el enlace no es válido o ya expiró -->
+        <div id="reset-invalid" hidden>
+          <p class="gris" role="alert">
+            El enlace no es válido o ya expiró. Solicita uno nuevo para continuar.
+          </p>
+          <p style="margin-top: 1rem;">
+            <a href="./recuperar.html" style="color: #24398A; text-decoration: underline;">Solicitar un enlace nuevo</a>
+          </p>
+        </div>
+
+        <!-- Se muestra cuando Supabase confirma la sesión de recuperación -->
+        <form id="reset-form" class="columna" hidden>
+          <p class="gris">Escribe tu nueva contraseña (mínimo 8 caracteres).</p>
+
+          <label for="new-password">Nueva contraseña</label>
+          <input id="new-password" name="new-password" type="password" placeholder="Nueva contraseña"
+            autocomplete="new-password" minlength="8" required>
+
+          <label for="confirm-password">Confirmar contraseña</label>
+          <input id="confirm-password" name="confirm-password" type="password" placeholder="Repite la contraseña"
+            autocomplete="new-password" minlength="8" required>
+
+          <p id="reset-error" class="gris" role="alert" aria-live="polite" hidden></p>
+
+          <input id="reset-btn" class="btn" style="width: 100%;" type="submit" value="Guardar contraseña">
+        </form>
+
+        <p id="reset-success" role="status" aria-live="polite" style="color: green;" hidden></p>
+      </div>
+
+      <div
+        class="login-outline"
+        aria-hidden="true"
+        style="position: absolute; top: -30px; left: -30px; bottom: -30px; right: -30px; border: 5px #24398A solid; border-radius: 3rem; z-index: -1;">
+      </div>
+
+    </div>
+  </div>
+  <script type="module" src="./nueva-contrasena.js"></script>
+</body>
+
+</html>
