@@ -1,4 +1,5 @@
 import { supabaseClient } from '../../auth/supabase.js';
+import { apiJson } from '../../api.js';
 
 const MIN_PASSWORD_LENGTH = 8;
 // Tiempo máximo de espera para que Supabase confirme el enlace del correo.
@@ -75,16 +76,16 @@ resetForm.addEventListener('submit', async (event) => {
   resetButton.value = 'Guardando...';
 
   try {
-    const { error } = await supabaseClient.auth.updateUser({
-      password: newPassword,
+    await apiJson('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ password: newPassword }),
     });
 
-    if (error) {
-      throw error;
-    }
-
     // Se cierra la sesión temporal de recuperación para que inicie sesión con la contraseña nueva.
-    await supabaseClient.auth.signOut();
+    const { error: signOutError } = await supabaseClient.auth.signOut();
+    if (signOutError) {
+      throw new Error('Tu contraseña cambió, pero no se pudo cerrar la sesión. Cierra sesión antes de continuar.');
+    }
 
     resetForm.hidden = true;
     successMessage.textContent =
@@ -95,8 +96,7 @@ resetForm.addEventListener('submit', async (event) => {
       window.location.href = LOGIN_URL;
     }, 2000);
   } catch (error) {
-    errorMessage.textContent =
-      'No fue posible actualizar la contraseña. Verifica que sea distinta a la anterior e inténtalo de nuevo.';
+    errorMessage.textContent = error.message || 'No fue posible actualizar la contraseña.';
     errorMessage.hidden = false;
 
     console.error('Error al actualizar la contraseña:', error);

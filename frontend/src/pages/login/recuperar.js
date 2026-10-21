@@ -1,14 +1,10 @@
-import { supabaseClient } from '../../auth/supabase.js';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 const recoveryForm = document.getElementById('recovery-form');
 const emailInput = document.getElementById('email');
 const recoveryButton = document.getElementById('recovery-btn');
 const errorMessage = document.getElementById('recovery-error');
 const successMessage = document.getElementById('recovery-success');
-
-// Pantalla a la que Supabase redirige desde el enlace del correo.
-// Debe estar permitida en Supabase > Authentication > URL Configuration > Redirect URLs.
-const REDIRECT_URL = `${window.location.origin}/src/pages/login/nueva-contrasena.html`;
 
 recoveryForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -22,13 +18,15 @@ recoveryForm.addEventListener('submit', async (event) => {
   recoveryButton.value = 'Enviando...';
 
   try {
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(
-      emailInput.value.trim(),
-      { redirectTo: REDIRECT_URL }
-    );
-
-    if (error) {
-      throw error;
+    const response = await fetch(`${API_URL}/auth/recovery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailInput.value.trim() }),
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 429
+        ? 'Demasiados intentos. Inténtalo más tarde.'
+        : 'No fue posible enviar el enlace. Inténtalo más tarde.');
     }
 
     // Mensaje genérico a propósito: no revela si el correo está registrado o no.
@@ -37,8 +35,7 @@ recoveryForm.addEventListener('submit', async (event) => {
     successMessage.hidden = false;
     recoveryForm.reset();
   } catch (error) {
-    errorMessage.textContent =
-      'No fue posible enviar el enlace. Inténtalo de nuevo en unos minutos.';
+    errorMessage.textContent = error.message || 'No fue posible enviar el enlace.';
     errorMessage.hidden = false;
 
     console.error('Error al solicitar la recuperación de contraseña:', error);
