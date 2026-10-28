@@ -141,3 +141,33 @@ def test_partial_failure_explicitly_reports_password_already_changed(client, use
     assert response.status_code == 503
     assert 'ya cambió' in response.json()['detail']
     assert 'database failure' not in response.text
+
+
+@pytest.mark.parametrize('role,leader', [(1, False), (2, False), (2, True), (3, False)])
+def test_each_role_can_change_only_its_own_password(
+    client, user, db_session, monkeypatch, role, leader,
+):
+    if role != 3:
+        db_session.add(Rol(id_rol=role, nombre=f'Role {role}'))
+    user.id_rol = role
+    user.is_leader = leader
+    other = Usuario(id_usuario=uuid4(), nombre='Other', apellido='Account',
+                    email='other@example.com', id_rol=3, debe_cambiar_password=True)
+    db_session.add(other)
+    db_session.commit()
+    request = Mock(return_value=nullcontext())
+    monkeypatch.setattr(auth, 'urlopen', request)
+
+    response = client.put('/auth/password',
+                          json={'password': 'new-valid-password', 'id_usuario': str(other.id_usuario)},
+                          headers={'Authorization': 'Bearer current-user-token'})
+
+    assert response.status_code == 200
+    outbound = request.call_args.args[0]
+    assert outbound.full_url.endswith('/auth/v1/user')
+    assert outbound.get_header('Authorization') == 'Bearer current-user-token'
+    assert json.loads(outbound.data) == {'password': 'new-valid-password'}
+    db_session.refresh(user)
+    db_session.refresh(other)
+    assert user.debe_cambiar_password is False
+    assert other.debe_cambiar_password is True

@@ -14,13 +14,26 @@
   <body class="dashboard-page">
     <header class="dashboard-session-bar">
       <span id="dashboard-role-label">Cargando...</span>
-      <button id="logout-button" type="button" aria-label="Cerrar sesión" title="Cerrar sesión">
+      <div class="account-settings">
+      <button id="settings-button" class="settings-toggle" type="button" aria-label="Ajustes de cuenta"
+        aria-expanded="false" aria-controls="settings-panel" title="Ajustes de cuenta">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M10 17l5-5-5-5"></path>
-          <path d="M15 12H3"></path>
-          <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path>
+          <path d="M18.93,9.13 21.82,10.09 21.82,13.91 18.93,14.87 18.93,14.87 20.29,17.59 17.59,20.29 14.87,18.93 14.87,18.93 13.91,21.82 10.09,21.82 9.13,18.93 9.13,18.93 6.41,20.29 3.71,17.59 5.07,14.87 5.07,14.87 2.18,13.91 2.18,10.09 5.07,9.13 5.07,9.13 3.71,6.41 6.41,3.71 9.13,5.07 9.13,5.07 10.09,2.18 13.91,2.18 14.87,5.07 14.87,5.07 17.59,3.71 20.29,6.41 18.93,9.13Z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
         </svg>
       </button>
+      <div id="settings-panel" class="settings-panel" hidden>
+        <p class="settings-heading">Mi cuenta</p>
+        <button id="change-password-button" class="settings-option" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>
+          Cambiar contraseña
+        </button>
+        <button id="logout-button" class="settings-option settings-option--logout" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 8l4 4-4 4M8 12h13"/></svg>
+          Cerrar sesión
+        </button>
+      </div>
+      </div>
     </header>
 
     <main class="dashboard-shell">
@@ -61,6 +74,44 @@
       </section>
     </main>
 
+    <dialog id="password-dialog" class="account-dialog" aria-labelledby="password-heading" aria-describedby="password-description">
+      <button class="dialog-close" type="button" data-close-account-dialog aria-label="Cerrar ventana">×</button>
+      <div class="account-dialog__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+      </div>
+      <h1 id="password-heading">Cambiar contraseña</h1>
+      <p id="password-description" class="account-dialog__description">Elige una contraseña nueva para tu cuenta.</p>
+      <form id="password-form">
+        <label for="account-new-password">Nueva contraseña</label>
+        <input id="account-new-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="password-hint" autofocus>
+        <p id="password-hint" class="field-hint">Entre 8 y 128 caracteres.</p>
+        <label for="account-confirm-password">Confirmar contraseña</label>
+        <input id="account-confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+        <p id="password-error" class="account-error" role="alert" hidden></p>
+        <div class="account-dialog__actions">
+          <button class="account-button account-button--secondary" type="button" data-close-account-dialog>Cancelar</button>
+          <button id="save-password-button" class="account-button account-button--primary" type="submit">Guardar contraseña</button>
+        </div>
+      </form>
+      <div id="password-success" role="status" hidden>
+        <p>Tu contraseña se actualizó correctamente.</p>
+        <button class="account-button account-button--primary" type="button" data-close-account-dialog>Volver al panel</button>
+      </div>
+    </dialog>
+
+    <dialog id="logout-dialog" class="account-dialog" aria-labelledby="logout-heading" aria-describedby="logout-description">
+      <button class="dialog-close" type="button" data-close-account-dialog aria-label="Cerrar ventana">×</button>
+      <div class="account-dialog__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 8l4 4-4 4M8 12h13"/></svg>
+      </div>
+      <h1 id="logout-heading">¿Cerrar sesión?</h1>
+      <p id="logout-description" class="account-dialog__description">¿Seguro que quieres salir? Tendrás que iniciar sesión de nuevo para continuar.</p>
+      <p id="logout-error" class="account-error" role="alert" hidden></p>
+      <div class="account-dialog__actions">
+        <button class="account-button account-button--secondary" type="button" data-close-account-dialog autofocus>Cancelar</button>
+        <button id="confirm-logout-button" class="account-button account-button--primary" type="button">Sí, cerrar sesión</button>
+      </div>
+    </dialog>
     <script type="module" src="./dashboard.js"></script>
   </body>
 </html>
