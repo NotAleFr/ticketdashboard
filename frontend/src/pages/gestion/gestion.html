@@ -41,6 +41,12 @@
           <option value="">Aula: todas</option>
         </select>
 
+        <div class="date-range-filter">
+          <label class="visually-hidden" for="date-range-filter">Período de registro</label>
+          <input id="date-range-filter" class="filter-control" type="text"
+            placeholder="Seleccionar período" autocomplete="off">
+          <button id="clear-date-range" type="button" aria-label="Limpiar fechas" hidden>×</button>
+        </div>
         <label class="visually-hidden" for="ticket-search">Buscar tickets</label>
         <input
           id="ticket-search"

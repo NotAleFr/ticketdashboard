@@ -129,7 +129,7 @@ select {
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(145px, 185px) minmax(150px, 195px) minmax(140px, 175px) minmax(220px, 1fr);
+  grid-template-columns: minmax(115px, .8fr) minmax(120px, .8fr) minmax(265px, 1.5fr) minmax(160px, 1.5fr);
   gap: 10px;
   margin-bottom: 22px;
 }
@@ -166,6 +166,55 @@ select {
 
 .search-control::placeholder {
   color: #9299a6;
+}
+
+.date-range-filter {
+  position: relative;
+  min-width: 0;
+}
+
+.date-range-filter .filter-control {
+  padding-right: 38px;
+  cursor: pointer;
+  font-size: .88rem;
+}
+
+#clear-date-range {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  width: 30px;
+  height: 32px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+  font-size: 1.4rem;
+}
+
+#clear-date-range:hover { background: #eef5ff; }
+
+body.gestion-page .flatpickr-calendar {
+  font-family: Inter, "Segoe UI", sans-serif;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(20, 35, 83, .2);
+}
+
+body.gestion-page .flatpickr-day.selected,
+body.gestion-page .flatpickr-day.startRange,
+body.gestion-page .flatpickr-day.endRange {
+  background: var(--ticket-navy);
+  border-color: var(--ticket-navy);
+}
+
+@media (max-width: 400px) {
+  body.gestion-page .flatpickr-calendar {
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
 }
 
 .ticket-table-card,
@@ -709,7 +758,7 @@ select {
   }
 
   .filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(265px, 1.5fr);
   }
 
   .search-control {
@@ -769,6 +818,10 @@ select {
   }
 
   .search-control {
+    grid-column: 1 / -1;
+  }
+
+  .date-range-filter {
     grid-column: 1 / -1;
   }
 

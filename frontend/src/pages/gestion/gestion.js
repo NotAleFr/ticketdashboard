@@ -1,4 +1,7 @@
 import { apiJson } from '../../api.js';
+import flatpickr from 'flatpickr';
+import { Spanish } from 'flatpickr/dist/l10n/es.js';
+import 'flatpickr/dist/flatpickr.min.css';
 
 const ticketsBody = document.getElementById('tickets-body');
 const ticketsMessage = document.getElementById('tickets-message');
@@ -35,6 +38,7 @@ const closeDialogError = document.getElementById('close-dialog-error');
 const closeDialogSubmit = document.getElementById('close-dialog-submit');
 
 let tickets = [];
+let dateRange = [];
 let selectedTicketId = null;
 let requestState = 'loading';
 let currentUser = null;
@@ -487,6 +491,10 @@ function getVisibleTickets() {
   const status = statusFilter.value;
   const classroom = classroomFilter.value;
   const searchText = ticketSearch.value.trim().toLowerCase();
+  // Include both whole days in the same local calendar as ticket details.
+  const from = dateRange[0] ? new Date(dateRange[0]) : null;
+  const until = dateRange[1] ? new Date(dateRange[1]) : null;
+  if (until) until.setDate(until.getDate() + 1);
 
   return tickets.filter((ticket) => {
     const matchesStatus = !status || ticket.estado === status;
@@ -501,7 +509,13 @@ function getVisibleTickets() {
     ].join(' ').toLowerCase();
     const matchesSearch = !searchText || searchableText.includes(searchText);
 
-    return matchesStatus && matchesClassroom && matchesSearch;
+    const registeredAt = ticket.fecha_registro ? new Date(ticket.fecha_registro) : new Date(NaN);
+    const matchesDates = (!from && !until) || (
+      !Number.isNaN(registeredAt.getTime())
+      && (!from || registeredAt >= from)
+      && (!until || registeredAt < until)
+    );
+    return matchesStatus && matchesClassroom && matchesSearch && matchesDates;
   });
 }
 
@@ -593,6 +607,31 @@ async function loadTickets() {
 }
 
 statusFilter.addEventListener('change', renderTickets);
+const dateRangeFilter = document.getElementById('date-range-filter');
+const clearDateRange = document.getElementById('clear-date-range');
+const datePicker = flatpickr(dateRangeFilter, {
+  mode: 'range',
+  locale: { ...Spanish, rangeSeparator: ' – ' },
+  dateFormat: 'd M Y',
+  ariaDateFormat: 'j F Y',
+  disableMobile: true,
+  onChange(selectedDates) {
+    clearDateRange.hidden = selectedDates.length === 0;
+    // Keep the current filter until both ends have been chosen.
+    if (selectedDates.length === 1) return;
+    dateRange = selectedDates.map(date => new Date(date));
+    renderTickets();
+  },
+  onClose(selectedDates, _value, instance) {
+    if (selectedDates.length === 1) {
+      instance.setDate([selectedDates[0], selectedDates[0]], true);
+    }
+  },
+});
+clearDateRange.addEventListener('click', () => {
+  datePicker.clear();
+  dateRangeFilter.focus();
+});
 classroomFilter.addEventListener('change', renderTickets);
 ticketSearch.addEventListener('input', renderTickets);
 refreshButton.addEventListener('click', loadTickets);
