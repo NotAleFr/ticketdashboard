@@ -628,6 +628,18 @@ document.querySelectorAll('[data-close-dialog]').forEach((button) => {
 async function initializePage() {
   try {
     currentUser = await apiJson('/usuarios/me');
+
+
+    const esTecnico = currentUser.id_rol === 2 && !currentUser.is_leader;
+    
+    if (esTecnico) {
+      const botonNuevoTicket = document.querySelector('.new-ticket-button');
+      if (botonNuevoTicket) {
+        botonNuevoTicket.style.display = 'none'; 
+      }
+    }
+   
+
   } catch (error) {
     showActionFeedback(`No se pudo cargar tu perfil: ${error.message}`, 'error');
   }
