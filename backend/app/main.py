@@ -5,13 +5,14 @@ from sqlalchemy import text
 
 from app.db.database import get_db
 from app.routers import tickets, usuarios, aulas, reportes, auth
+from app.core.config import settings
 
 app = FastAPI(title="API - Sistema de Gestión de Tickets")
 
-# CORS setup for Vite frontend
+# Vite development and the packaged Capacitor Android origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
