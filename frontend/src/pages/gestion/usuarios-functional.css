@@ -1,0 +1,18 @@
+/* Interaction states; the supplied usuarios.css is preserved. */
+[hidden] { display: none !important; }
+.usuarios-container { overflow-y: auto; }
+#users-body tr[data-id] { cursor: pointer; }
+#users-body tr:focus-visible { outline: 2px solid var(--primario); outline-offset: -2px; }
+.metadata-col, .metadata-value, .detail-identity, .identity-info { min-width: 0; }
+.metadata-value, .identity-name { overflow-wrap: anywhere; }
+.metadata-label { flex-shrink: 0; }
+.detail-header { gap: 12px; flex-wrap: wrap; }
+#user-dialog { border: 1px solid var(--border-subtle); border-radius: 20px; padding: 24px; width: min(480px, calc(100vw - 32px)); max-height: 90vh; font-family: inherit; }
+#user-dialog::backdrop { background: rgb(16 24 40 / 45%); }
+#user-dialog h2 { margin-top: 0; color: var(--secundario); }
+#user-fields { display: grid; gap: 12px; }
+#user-fields label { display: grid; gap: 5px; font-size: 13px; }
+#user-fields input, #user-fields select { padding: 9px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; font: inherit; width: 100%; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+#user-dialog-message { overflow-wrap: anywhere; white-space: pre-wrap; }
+button:disabled { opacity: .55; cursor: wait; }

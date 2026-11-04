@@ -8,13 +8,20 @@ from app.schemas.aulas import (
     EquipoCreate, EquipoUpdate, EquipoRead,
 )
 
+from app.core.deps import get_current_user
+from app.models.usuarios import Usuario
+
+
 router = APIRouter(tags=["Aulas y Equipos"])
 
 
 # ---------------- Aulas ----------------
 
 @router.get("/aulas", response_model=list[AulaRead])
-def listar_aulas(db: Session = Depends(get_db)):
+def listar_aulas(
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(get_current_user),
+):
     return db.query(Aula).all()
 
 
@@ -62,7 +69,12 @@ def eliminar_aula(id_aula: int, db: Session = Depends(get_db)):
 # ---------------- Equipos ----------------
 
 @router.get("/equipos", response_model=list[EquipoRead])
-def listar_equipos(id_aula: int | None = None, db: Session = Depends(get_db)):
+def listar_equipos(
+    id_aula: int | None = None,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(get_current_user),
+):
+
     query = db.query(Equipo)
     if id_aula:
         query = query.filter(Equipo.id_aula == id_aula)

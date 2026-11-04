@@ -14,5 +14,7 @@ Sistema de gestión de tickets diseñado para administrar el soporte técnico en
 
 ## Estructura del Proyecto
 
+Android (Capacitor): [configuracion y comandos de desarrollo](docs/android.md).
+
 - `/frontend` - Aplicación cliente.
 - `/backend` - API REST y lógica de negocio.

@@ -1,0 +1,9 @@
+{
+  "appId": "com.ticketdashboard.app",
+  "appName": "Tickets Laboratorios",
+  "webDir": "dist",
+  "server": {
+    "hostname": "localhost",
+    "androidScheme": "https"
+  }
+}

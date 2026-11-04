@@ -1,8 +1,7 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-
 from app.models.tickets import EstadoTicket
 
 class TicketBase(BaseModel):
@@ -12,7 +11,7 @@ class TicketBase(BaseModel):
     id_equipo: Optional[int] = None
 
 class TicketCreate(TicketBase):
-    problemas_ids: List[int] 
+    problemas_ids: List[int] = Field(min_length=1)
 
 class TicketUpdate(BaseModel):
     """Todos los campos opcionales: solo se actualiza lo que se envíe."""
@@ -27,8 +26,28 @@ class TicketRead(TicketBase):
     estado: EstadoTicket
     fecha_registro: datetime
 
-    # UUIDs because of Supabase Auth
+    # UUIDs porque corresponden a Supabase Auth
     id_usuario: UUID
     id_tecnico: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class TicketListRead(TicketRead):
+    nombre_reportante: str
+    correo_reportante: str
+    nombre_tecnico: Optional[str] = None
+
+
+class TipoProblemaRead(BaseModel):
+    id_tipo_problema: int
+    nombre: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AsignarTecnicoRequest(BaseModel):
+    id_tecnico: UUID
+
+class ResolverTicketRequest(BaseModel):
+    texto_solucion: str = Field(min_length=1)
+

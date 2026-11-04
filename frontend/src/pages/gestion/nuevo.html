@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reporta una falla de un laboratorio de cómputo.">
+    <title>Nuevo ticket</title>
+    <link rel="icon" type="image/x-icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet">
+    <link rel="stylesheet" href="./gestion.css">
+    <link rel="stylesheet" href="./nuevo.css">
+  </head>
+  <body class="gestion-page new-ticket-page">
+    <main class="ticket-shell new-ticket-shell">
+      <header class="page-header new-ticket-header">
+        <a class="back-button" href="./gestion.html" aria-label="Volver a gestión de tickets">
+          <img src="/imgs/iconos/arrowback.svg" alt="">
+        </a>
+        <div class="new-ticket-heading">
+          <h1>Nuevo ticket</h1>
+          <p>Reporta una falla del laboratorio</p>
+        </div>
+      </header>
+
+      <section class="new-ticket-card" aria-label="Formulario de nuevo ticket">
+        <form id="new-ticket-form" novalidate>
+          <div class="form-row">
+            <label class="form-label" for="ticket-title">Nombre del ticket</label>
+            <div class="form-field">
+              <input
+                id="ticket-title"
+                name="nombre_ticket"
+                type="text"
+                maxlength="100"
+                placeholder="Ej. PC no enciende - 5J-CO203"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="form-row">
+            <span class="form-label">Ubicación</span>
+            <div class="location-controls">
+              <label class="form-field" for="classroom-select">
+                <select id="classroom-select" name="id_aula" required>
+                  <option value="">Cargando aulas...</option>
+                </select>
+                <span class="field-hint">Aula / laboratorio</span>
+              </label>
+
+              <label class="form-field" for="equipment-select">
+                <select id="equipment-select" name="id_equipo" disabled>
+                  <option value="">Selecciona un aula primero</option>
+                </select>
+                <span class="field-hint">Equipo afectado (opcional)</span>
+              </label>
+            </div>
+          </div>
+
+          <fieldset class="form-row problem-row">
+            <legend class="form-label">Tipo de problema</legend>
+            <div id="problem-types-list" class="problem-types-list" aria-live="polite">
+              <span class="field-hint">Cargando tipos de problema...</span>
+            </div>
+          </fieldset>
+
+          <div class="form-row description-row">
+            <label class="form-label" for="ticket-description">Detalle del problema</label>
+            <div class="form-field">
+              <textarea
+                id="ticket-description"
+                name="descripcion"
+                rows="5"
+                placeholder="Describe qué ocurre con el equipo"
+                required
+              ></textarea>
+            </div>
+          </div>
+
+          <p id="form-message" class="form-message" role="status" aria-live="polite" hidden></p>
+
+          <footer class="form-actions">
+            <a class="cancel-button" href="./gestion.html">Cancelar</a>
+            <button id="submit-ticket" class="submit-ticket-button" type="submit" disabled>
+              Crear ticket
+            </button>
+          </footer>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="./nuevo.js"></script>
+  </body>
+</html>

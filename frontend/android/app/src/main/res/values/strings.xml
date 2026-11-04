@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Tickets Laboratorios</string>
+    <string name="title_activity_main">Tickets Laboratorios</string>
+    <string name="package_name">com.ticketdashboard.app</string>
+    <string name="custom_url_scheme">com.ticketdashboard.app</string>
+</resources>
