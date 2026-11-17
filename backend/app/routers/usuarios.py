@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime, timezone
@@ -8,21 +9,16 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.models.aulas import Aula
 from app.services.user_admin import auth_request, auth_metadata
 from app.schemas.users import UsuarioAdminRead, UsuarioProvisionado, UsuarioEstadoUpdate
-from app.core.deps import get_current_user
+from app.core.deps import get_authenticated_user, get_current_user, require_admin
 from app.db.database import get_db
 from app.models.usuarios import Usuario
+from app.models.tickets import EstadoTicket, Ticket
 from app.schemas.users import UsuarioCreate, UsuarioUpdate, UsuarioRead
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 
-def require_admin(user: Usuario = Depends(get_current_user)):
-    if user.id_rol != 1:
-        raise HTTPException(403, "Solo el administrador puede administrar usuarios")
-    return user
-
-
-def validate_profile(values, db):
+def validate_profile(values, db, lab_actual=None):
     if values.get("id_rol") not in (1, 2, 3):
         raise HTTPException(422, "Rol no válido")
     for field in ("nombre", "apellido"):
@@ -35,13 +31,63 @@ def validate_profile(values, db):
     lab = values.get("laboratorio_asignado_id")
     if values.get("is_leader") and (values["id_rol"] != 2 or lab is None):
         raise HTTPException(422, "Un líder debe ser técnico y tener laboratorio asignado")
-    if lab is not None and not db.query(Aula).filter(Aula.id_aula == lab, Aula.activo.is_(True)).first():
+    # Solo se exige laboratorio activo al asignarlo: si ya estaba asignado y luego se
+    # desactivó, el administrador debe poder seguir editando el resto del perfil.
+    if lab is not None and lab != lab_actual and not db.query(Aula).filter(Aula.id_aula == lab, Aula.activo.is_(True)).first():
         raise HTTPException(422, "El laboratorio no existe o está inactivo")
+
+
+def bloquear_administradores(db, admin):
+    """Serializa las operaciones que quitan acceso administrativo.
+
+    Bloquea todas las filas de administradores (siempre en el mismo orden, sin
+    interbloqueos) y vuelve a comprobar que quien hace la petición sigue siendo
+    un administrador habilitado. Así dos administradores que se suspenden o se
+    degradan mutuamente al mismo tiempo no pueden dejar el sistema sin ninguno:
+    la segunda petición espera y luego es rechazada.
+    """
+    admins = (
+        db.query(Usuario)
+        .filter(Usuario.id_rol == 1)
+        .order_by(Usuario.id_usuario)
+        .with_for_update()
+        .populate_existing()
+        .all()
+    )
+    if admin.id_usuario not in {row.id_usuario for row in admins}:
+        raise HTTPException(403, "Ya no tienes permisos de administrador")
+    if db.bind.dialect.name == "postgresql" and db.execute(
+        text("SELECT banned_until > now() FROM auth.users WHERE id = :id"), {"id": str(admin.id_usuario)}
+    ).scalar():
+        raise HTTPException(403, "La cuenta está suspendida")
+
+
+def usuario_bloqueado(db, id_usuario, admin, quita_admin):
+    """Lee el usuario con su fila bloqueada hasta el commit.
+
+    Si la operación le quita acceso a un administrador, primero se bloquean
+    todos los administradores (incluido él) para mantener un orden único."""
+    usuario = obtener_usuario(id_usuario, db, admin)
+    if usuario.id_rol == 1 and quita_admin:
+        bloquear_administradores(db, admin)
+    return (
+        db.query(Usuario)
+        .filter(Usuario.id_usuario == id_usuario)
+        .with_for_update()
+        .populate_existing()
+        .one()
+    )
 
 
 @router.get("/administracion", response_model=list[UsuarioAdminRead])
 def administrar_usuarios(db: Session = Depends(get_db), admin=Depends(require_admin)):
     metadata = auth_metadata(db)
+    en_proceso = dict(
+        db.query(Ticket.id_tecnico, func.count(Ticket.id_ticket))
+        .filter(Ticket.estado == EstadoTicket.EN_PROCESO.value, Ticket.id_tecnico.isnot(None))
+        .group_by(Ticket.id_tecnico)
+        .all()
+    )
     result = []
     for user in db.query(Usuario).order_by(Usuario.nombre, Usuario.apellido).all():
         auth = metadata.get(str(user.id_usuario), {})
@@ -50,7 +96,7 @@ def administrar_usuarios(db: Session = Depends(get_db), admin=Depends(require_ad
             banned = banned.replace(tzinfo=timezone.utc) if banned.tzinfo is None else banned
         suspended = banned is not None and banned > datetime.now(timezone.utc)
         data = UsuarioRead.model_validate(user).model_dump()
-        data.update(ultimo_acceso=auth.get("last_sign_in_at"), estado=(
+        data.update(tickets_en_proceso=en_proceso.get(user.id_usuario, 0), ultimo_acceso=auth.get("last_sign_in_at"), estado=(
             "suspendido" if suspended else "activo" if auth.get("last_sign_in_at") else "invitado"))
         result.append(data)
     return result
@@ -62,7 +108,8 @@ def listar_usuarios(db: Session = Depends(get_db), admin=Depends(require_admin))
 
 @router.get("/me", response_model=UsuarioRead)
 def obtener_usuario_actual(
-    usuario_actual: Usuario = Depends(get_current_user),
+    # Sin exigir cambio de contraseña: el cliente necesita el perfil para pedirlo.
+    usuario_actual: Usuario = Depends(get_authenticated_user),
 ):
     return usuario_actual
 
@@ -140,10 +187,12 @@ def crear_usuario(datos: UsuarioCreate, db: Session = Depends(get_db), admin=Dep
 
 @router.put("/{id_usuario}", response_model=UsuarioRead)
 def actualizar_usuario(id_usuario: UUID, datos: UsuarioUpdate, db: Session = Depends(get_db), admin=Depends(require_admin)):
-    usuario = obtener_usuario(id_usuario, db, admin)
     changes = datos.model_dump(exclude_unset=True)
+    # Fila bloqueada: dos ediciones simultáneas no pueden combinar cambios que
+    # por separado son válidos (p. ej. un docente marcado como líder).
+    usuario = usuario_bloqueado(db, id_usuario, admin, quita_admin=changes.get("id_rol", 1) != 1)
     values = UsuarioRead.model_validate(usuario).model_dump() | changes
-    validate_profile(values, db)
+    validate_profile(values, db, lab_actual=usuario.laboratorio_asignado_id)
     if id_usuario == admin.id_usuario and values["id_rol"] != 1:
         raise HTTPException(422, "No puedes quitar tu propio acceso de administrador")
     for campo in changes:
@@ -163,15 +212,27 @@ def eliminar_usuario(id_usuario: UUID, db: Session = Depends(get_db), admin=Depe
 def restablecer_password(id_usuario: UUID, db: Session = Depends(get_db), admin=Depends(require_admin)):
     user = obtener_usuario(id_usuario, db, admin)
     password = secrets.token_urlsafe(18)
-    auth_request("PUT", f"/{id_usuario}", {"password": password})
+    # Primero se exige el cambio: si Supabase falla después, la contraseña anterior
+    # sigue sirviendo y solo se le pedirá cambiarla; nunca queda una contraseña
+    # temporal activa sin la obligación de cambiarla.
     user.debe_cambiar_password = True
+    db.commit()
+    # Fila bloqueada durante el cambio en Supabase: un PUT /auth/password simultáneo
+    # del propio usuario espera y no puede dejar la bandera en False justo antes de
+    # que se instale la contraseña temporal.
+    user = (
+        db.query(Usuario).filter(Usuario.id_usuario == id_usuario)
+        .with_for_update().populate_existing().one()
+    )
+    user.debe_cambiar_password = True
+    auth_request("PUT", f"/{id_usuario}", {"password": password})
     db.commit()
     return {"password_temporal": password}
 
 
 @router.put("/{id_usuario}/estado", status_code=204)
 def cambiar_estado(id_usuario: UUID, datos: UsuarioEstadoUpdate, db: Session = Depends(get_db), admin=Depends(require_admin)):
-    obtener_usuario(id_usuario, db, admin)
     if id_usuario == admin.id_usuario and datos.suspendido:
         raise HTTPException(422, "No puedes suspender tu propia cuenta")
+    usuario_bloqueado(db, id_usuario, admin, quita_admin=datos.suspendido)
     auth_request("PUT", f"/{id_usuario}", {"ban_duration": "876000h" if datos.suspendido else "none"})

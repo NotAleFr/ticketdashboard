@@ -354,3 +354,283 @@ a {
 [hidden] {
     display: none !important;
 }
+/* ===== Pantallas de acceso (login, recuperar, nueva contraseña) =====
+   Clases propias (auth-*) para no afectar a reportes/usuarios, que también cargan este archivo. */
+.auth {
+    --auth-ink: #14213d;
+    --auth-muted: #4b5563;
+    --auth-placeholder: #5f6673;
+    --auth-line: #7b8497;
+    --auth-field: #f4f5f8;
+    --auth-error: #b42318;
+    --auth-error-bg: #fef3f2;
+    --auth-success: #067647;
+    --auth-success-bg: #ecfdf3;
+    box-sizing: border-box;
+    min-height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 56px 32px;
+    color: var(--auth-ink);
+}
+
+.auth ::selection {
+    background: rgb(225 183 61 / .45);
+}
+
+.auth__frame {
+    position: relative;
+    box-sizing: border-box;
+    width: min(100%, 1040px);
+    min-height: min(640px, calc(100vh - 112px));
+    display: grid;
+    place-items: center;
+    padding: 48px 24px;
+    background: var(--secundario);
+    border-radius: 2rem;
+}
+
+/* Contorno exterior de la marca. */
+.auth__frame::before {
+    content: "";
+    position: absolute;
+    inset: -26px;
+    border: 5px solid var(--secundario);
+    border-radius: 2.8rem;
+    pointer-events: none;
+}
+
+.auth__card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 26rem;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 28px 28px;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 18px 40px -20px rgb(8 16 54 / .55);
+}
+
+.auth .auth__title {
+    margin: 0 0 6px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+}
+
+.auth .auth__lead {
+    margin: 0 0 24px;
+    font-size: .9375rem;
+    line-height: 1.5;
+    color: var(--auth-muted);
+}
+
+.auth__form {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.auth__field label {
+    font-size: .9375rem;
+    font-weight: 500;
+}
+
+.auth .auth__input {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 13px 16px;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--auth-ink);
+    background: var(--auth-field);
+    border: 1.5px solid var(--auth-line);
+    border-radius: .75rem;
+    transition: border-color .15s ease-out, background-color .15s ease-out;
+}
+
+.auth .auth__input::placeholder {
+    color: var(--auth-placeholder);
+}
+
+.auth .auth__input:hover {
+    border-color: #9aa3b8;
+}
+
+.auth .auth__input:focus-visible {
+    outline: 3px solid rgb(36 57 138 / .3);
+    outline-offset: 1px;
+    border-color: var(--secundario);
+    background: #fff;
+}
+
+.auth .auth__input:user-invalid {
+    border-color: var(--auth-error);
+}
+
+.auth .auth__aside {
+    align-self: stretch;
+    display: flex;
+    justify-content: flex-end;
+    margin: -4px 0 20px;
+}
+
+.auth .auth__link {
+    display: inline-block;
+    padding-block: 6px;
+    color: var(--secundario);
+    font-size: .875rem;
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    border-radius: 4px;
+}
+
+.auth .auth__link:hover {
+    text-decoration-thickness: 2px;
+}
+
+.auth .auth__link:focus-visible {
+    outline: 3px solid rgb(36 57 138 / .3);
+    outline-offset: 2px;
+}
+
+.auth .auth__message {
+    align-self: stretch;
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    font-size: .9375rem;
+    line-height: 1.45;
+    border-radius: .625rem;
+}
+
+.auth .auth__message--error {
+    color: var(--auth-error);
+    background: var(--auth-error-bg);
+}
+
+.auth .auth__message--success {
+    color: var(--auth-success);
+    background: var(--auth-success-bg);
+}
+
+.auth .auth__message--info {
+    padding: 0;
+    color: var(--auth-muted);
+}
+
+.auth .auth__submit {
+    width: 100%;
+    margin: 0;
+    padding: 14px 16px;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--auth-ink);
+    background: var(--primario);
+    border: 0;
+    border-radius: .75rem;
+    cursor: pointer;
+    transition: background-color .15s ease-out;
+}
+
+.auth .auth__submit:hover {
+    background: var(--prmario2);
+}
+
+.auth .auth__submit:focus-visible {
+    outline: 3px solid var(--secundario);
+    outline-offset: 2px;
+}
+
+.auth .auth__submit:disabled {
+    cursor: progress;
+    opacity: .7;
+}
+
+.auth a.auth__submit {
+    box-sizing: border-box;
+    display: block;
+    text-align: center;
+    text-decoration: none;
+}
+
+.auth a.auth__submit[hidden] {
+    display: none;
+}
+
+.auth .auth__password {
+    position: relative;
+}
+
+.auth .auth__password .auth__input {
+    padding-right: 52px;
+}
+
+.auth .auth__reveal {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    color: var(--auth-muted);
+    background: transparent;
+    border: 0;
+    border-radius: .6rem;
+    cursor: pointer;
+    transform: translateY(-50%);
+}
+
+.auth .auth__reveal:hover {
+    color: var(--auth-ink);
+    background: rgb(36 57 138 / .08);
+}
+
+.auth .auth__reveal:focus-visible {
+    outline: 3px solid var(--secundario);
+    outline-offset: -3px;
+}
+
+.auth .auth__reveal svg {
+    width: 20px;
+    height: 20px;
+}
+
+.auth .auth__footer {
+    align-self: center;
+    margin: 20px 0 0;
+}
+
+@media (max-width: 640px) {
+    .auth {
+        padding: 16px;
+    }
+
+    .auth__frame {
+        min-height: calc(100dvh - 32px);
+        padding: 24px 14px;
+        border-radius: 1.5rem;
+    }
+
+    /* En teléfono el contorno doble solo le roba ancho al formulario. */
+    .auth__frame::before {
+        display: none;
+    }
+
+    .auth__card {
+        padding: 28px 20px 24px;
+    }
+}

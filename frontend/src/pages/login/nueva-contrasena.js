@@ -1,10 +1,23 @@
 import { supabaseClient } from '../../auth/supabase.js';
 import { apiJson } from '../../api.js';
+import { enablePasswordToggles } from './password-toggle.js';
 
 const MIN_PASSWORD_LENGTH = 8;
 // Tiempo máximo de espera para que Supabase confirme el enlace del correo.
 const LINK_CHECK_TIMEOUT_MS = 5000;
-const LOGIN_URL = '/src/pages/login/login.html';
+// Marca que esta pestaña llegó por un enlace de recuperación válido (sobrevive a recargar).
+const RECOVERY_FLAG = 'password-recovery-flow';
+
+function readRecoveryFlag() {
+  try { return sessionStorage.getItem(RECOVERY_FLAG) === '1'; } catch { return false; }
+}
+
+function setRecoveryFlag(active) {
+  try {
+    if (active) sessionStorage.setItem(RECOVERY_FLAG, '1');
+    else sessionStorage.removeItem(RECOVERY_FLAG);
+  } catch { /* sin almacenamiento: recargar pedirá un enlace nuevo */ }
+}
 
 const checkingMessage = document.getElementById('reset-checking');
 const invalidBlock = document.getElementById('reset-invalid');
@@ -14,6 +27,9 @@ const confirmPasswordInput = document.getElementById('confirm-password');
 const resetButton = document.getElementById('reset-btn');
 const errorMessage = document.getElementById('reset-error');
 const successMessage = document.getElementById('reset-success');
+const continueLink = document.getElementById('reset-continue');
+
+enablePasswordToggles();
 
 let recoveryReady = false;
 
@@ -43,8 +59,13 @@ if (urlParams.get('error')) {
 }
 
 // Supabase procesa el enlace automáticamente y emite PASSWORD_RECOVERY cuando es válido.
-supabaseClient.auth.onAuthStateChange((event) => {
+// Al recargar, el fragmento ya se consumió: solo se acepta la sesión restaurada si
+// esta misma pestaña había validado antes un enlace de recuperación.
+supabaseClient.auth.onAuthStateChange((event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
+    setRecoveryFlag(true);
+    showForm();
+  } else if (event === 'INITIAL_SESSION' && session && readRecoveryFlag()) {
     showForm();
   }
 });
@@ -81,20 +102,22 @@ resetForm.addEventListener('submit', async (event) => {
       body: JSON.stringify({ password: newPassword }),
     });
 
-    // Se cierra la sesión temporal de recuperación para que inicie sesión con la contraseña nueva.
+    // La contraseña ya cambió: desde aquí no se vuelve a ofrecer el formulario.
+    setRecoveryFlag(false);
+    // Se cierra la sesión de recuperación. Si el servidor no responde, al menos se
+    // descarta la sesión local para que el siguiente acceso use la contraseña nueva.
     const { error: signOutError } = await supabaseClient.auth.signOut();
     if (signOutError) {
-      throw new Error('Tu contraseña cambió, pero no se pudo cerrar la sesión. Cierra sesión antes de continuar.');
+      console.error('No se pudo cerrar la sesión en el servidor:', signOutError);
+      await supabaseClient.auth.signOut({ scope: 'local' });
     }
 
     resetForm.hidden = true;
     successMessage.textContent =
-      'Tu contraseña se actualizó correctamente. Te llevamos al inicio de sesión...';
+      'Tu contraseña se actualizó correctamente. Inicia sesión con tu contraseña nueva.';
     successMessage.hidden = false;
-
-    setTimeout(() => {
-      window.location.href = LOGIN_URL;
-    }, 2000);
+    continueLink.hidden = false;
+    continueLink.focus();
   } catch (error) {
     errorMessage.textContent = error.message || 'No fue posible actualizar la contraseña.';
     errorMessage.hidden = false;

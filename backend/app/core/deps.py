@@ -1,8 +1,9 @@
 """
-Dependencia real de autenticación (API-42).
-Utiliza HTTPBearer para extraer el token JWT del header de la petición.
-Usa app.core.security para validarlo contra el secreto de Supabase.
-Busca al usuario en la base de datos y lo devuelve, o lanza un error 401/404.
+Autenticación (API-42): valida el JWT de Supabase y carga el perfil de USUARIOS.
+
+- get_authenticated_user: sesión válida y cuenta no suspendida.
+- get_current_user: además exige que el usuario ya haya cambiado su contraseña
+  temporal (debe_cambiar_password = FALSE). Es la dependencia por defecto.
 """
 
 from uuid import UUID
@@ -15,16 +16,17 @@ from app.db.database import get_db
 from app.models.usuarios import Usuario
 from app.core.security import verify_token
 
-# Instanciamos el esquema de seguridad Bearer
 token_bearer = HTTPBearer()
 
+ROL_ADMIN = 1
+ROL_TECNICO = 2
+ROL_MAESTRO = 3
 
-def get_current_user(
+
+def get_authenticated_user(
     credentials: HTTPAuthorizationCredentials = Depends(token_bearer),
-    db: Session = Depends(get_db)
-    ) -> Usuario:
-    
-    # Validar el token usando nuestra función de seguridad
+    db: Session = Depends(get_db),
+) -> Usuario:
     try:
         payload = verify_token(credentials.credentials)
     except ValueError as e:
@@ -33,37 +35,44 @@ def get_current_user(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Extraer el 'sub' del token
-    user_id_str = payload.get("sub")
-    if not user_id_str:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="El token no contiene un identificador de usuario (sub)",
-        )
-        
+
     try:
-        user_id = UUID(user_id_str)
+        user_id = UUID(str(payload.get("sub")))
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="El 'sub' del token no es un UUID válido",
+            detail="El token no contiene un usuario válido",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Buscar al usuario en la tabla USUARIOS usando el UUID
     user = db.query(Usuario).filter(Usuario.id_usuario == user_id).first()
-    
     if not user:
+        # La identidad existe en Supabase pero no tiene perfil en el sistema.
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario autenticado no encontrado en la base de datos local",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tu cuenta no tiene un perfil en el sistema. Contacta al administrador.",
         )
-        
-    # A signed JWT may outlive a ban; enforce suspension on every API request.
+
+    # Un JWT firmado puede sobrevivir a una suspensión; se valida en cada petición.
     if db.bind.dialect.name == "postgresql":
         suspended = db.execute(text(
             "SELECT banned_until > now() FROM auth.users WHERE id = :id"
         ), {"id": str(user.id_usuario)}).scalar()
         if suspended:
             raise HTTPException(status_code=403, detail="La cuenta está suspendida")
+    return user
+
+
+def get_current_user(user: Usuario = Depends(get_authenticated_user)) -> Usuario:
+    if user.debe_cambiar_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Debes cambiar tu contraseña temporal antes de continuar.",
+        )
+    return user
+
+
+def require_admin(user: Usuario = Depends(get_current_user)) -> Usuario:
+    if user.id_rol != ROL_ADMIN:
+        raise HTTPException(403, "Solo el administrador puede realizar esta acción")
     return user

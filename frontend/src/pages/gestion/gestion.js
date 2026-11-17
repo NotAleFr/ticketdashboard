@@ -1,4 +1,5 @@
 import { apiJson } from '../../api.js';
+import { renderHistory } from './ticket-history.js';
 import flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es.js';
 import 'flatpickr/dist/flatpickr.min.css';
@@ -23,6 +24,10 @@ const detailStatus = document.getElementById('detail-status');
 const detailAssignee = document.getElementById('detail-assignee');
 const detailTitle = document.getElementById('detail-title');
 const detailDescription = document.getElementById('detail-description-text');
+const detailCategories = document.getElementById('detail-categories');
+const detailHistory = document.getElementById('detail-history');
+const detailHistoryMessage = document.getElementById('detail-history-message');
+const newTicketButton = document.querySelector('.new-ticket-button');
 const assignTicketButton = document.getElementById('assign-ticket-button');
 const changeTicketStateButton = document.getElementById('change-ticket-state-button');
 const closeTicketButton = document.getElementById('close-ticket-button');
@@ -45,9 +50,27 @@ let currentUser = null;
 let activeActionTicket = null;
 let activeDialogAction = null;
 let actionFeedbackTimer = null;
+let historyKey = null;
+let historyRequest = 0;
+const detailsSection = document.querySelector('.ticket-details');
+const detailMoreButton = document.getElementById('detail-more');
+const filtersSection = document.querySelector('.filters');
+const dateToggle = document.getElementById('date-toggle');
+const filtersToggle = document.getElementById('filters-toggle');
 
 function formatTicketId(id) {
   return `#${String(id).padStart(3, '0')}`;
+}
+
+function classroomName(ticket) {
+  if (ticket.nombre_aula) return ticket.nombre_aula;
+  return ticket.id_aula == null ? 'Aula no especificada' : `Aula ${ticket.id_aula}`;
+}
+
+function equipmentName(ticket) {
+  if (ticket.id_equipo == null) return 'Sin equipo específico';
+  const name = [ticket.equipo_tipo, ticket.equipo_identificador].filter(Boolean).join(' ');
+  return name || `Equipo ${ticket.id_equipo}`;
 }
 
 function formatDate(value) {
@@ -133,10 +156,10 @@ function createTicketRow(ticket) {
   const locationCell = document.createElement('td');
   locationCell.className = 'ticket-location';
   const classroom = document.createElement('span');
-  classroom.textContent = ticket.id_aula == null ? 'Aula —' : `Aula ${ticket.id_aula}`;
+  classroom.textContent = classroomName(ticket);
   const equipment = document.createElement('span');
   equipment.className = 'ticket-problem__description';
-  equipment.textContent = ticket.id_equipo == null ? 'Sin equipo específico' : `Equipo ${ticket.id_equipo}`;
+  equipment.textContent = equipmentName(ticket);
   locationCell.append(classroom, equipment);
   row.append(locationCell);
 
@@ -157,15 +180,17 @@ function createTicketRow(ticket) {
   row.append(reporter);
 
   const statusCell = document.createElement('td');
+  statusCell.className = 'ticket-status';
   statusCell.append(
     createBadge(ticket.estado || 'Desconocido', `status-badge ${getStatusClass(ticket.estado)}`),
   );
   row.append(statusCell);
 
-  const assignee = ticket.nombre_tecnico || (ticket.id_tecnico ? 'Nombre no disponible' : '—');
-  row.append(createTextCell(assignee, ticket.id_tecnico ? '' : 'assignee-muted'));
+  const assignee = ticket.nombre_tecnico || (ticket.id_tecnico ? 'Nombre no disponible' : 'Sin asignar');
+  row.append(createTextCell(assignee, ticket.id_tecnico ? 'ticket-assignee' : 'ticket-assignee assignee-muted'));
 
   const actionCell = document.createElement('td');
+  actionCell.className = 'ticket-action';
   actionCell.append(createViewButton(ticket));
   row.append(actionCell);
 
@@ -181,17 +206,17 @@ function updateClassroomOptions() {
   allOption.textContent = 'Aula: todas';
   classroomFilter.append(allOption);
 
-  const classrooms = [...new Set(
-    tickets
-      .map((ticket) => ticket.id_aula)
-      .filter((id) => id != null)
-      .map(String),
-  )].sort((left, right) => Number(left) - Number(right));
+  const names = new Map();
+  for (const ticket of tickets) {
+    if (ticket.id_aula != null) names.set(String(ticket.id_aula), classroomName(ticket));
+  }
+  const classrooms = [...names.keys()]
+    .sort((left, right) => names.get(left).localeCompare(names.get(right), 'es', { numeric: true }));
 
   for (const classroomId of classrooms) {
     const option = document.createElement('option');
     option.value = classroomId;
-    option.textContent = `Aula ${classroomId}`;
+    option.textContent = names.get(classroomId);
     classroomFilter.append(option);
   }
 
@@ -203,12 +228,18 @@ function renderDetails(ticket) {
   detailEmpty.hidden = Boolean(ticket);
   detailId.textContent = ticket ? formatTicketId(ticket.id_ticket) : '—';
 
-  if (!ticket) return;
+  if (!ticket) {
+    // Sin selección: se descarta cualquier historial que siga en camino.
+    historyKey = null;
+    historyRequest += 1;
+    return;
+  }
 
-  document.getElementById('detail-classroom').textContent =
-    ticket.id_aula == null ? 'No especificada' : `Aula ${ticket.id_aula}`;
-  detailEquipment.textContent =
-    ticket.id_equipo == null ? 'Sin equipo específico' : `Equipo ${ticket.id_equipo}`;
+  detailClassroom.textContent = classroomName(ticket);
+  detailEquipment.textContent = equipmentName(ticket);
+  detailCategories.replaceChildren(...(ticket.problemas?.length
+    ? ticket.problemas.map((name) => createBadge(name, 'category-chip'))
+    : [document.createTextNode('Sin categoría')]));
   const reporterName = ticket.nombre_reportante || 'Nombre no disponible';
   detailReporter.textContent = ticket.correo_reportante
     ? `${reporterName} · ${ticket.correo_reportante}`
@@ -223,6 +254,29 @@ function renderDetails(ticket) {
     createBadge(ticket.estado || 'Desconocido', `status-badge ${getStatusClass(ticket.estado)}`),
   );
   renderActionButtons(ticket);
+  loadHistory(ticket);
+}
+
+// El historial se pide al seleccionar; se ignoran respuestas de una selección anterior.
+async function loadHistory(ticket) {
+  const key = `${ticket.id_ticket}:${ticket.estado}:${ticket.id_tecnico ?? ''}`;
+  if (historyKey === key) return;
+  historyKey = key;
+  // Cada petición recibe un número; solo la más reciente puede pintar el resultado.
+  const request = ++historyRequest;
+  detailHistoryMessage.textContent = 'Cargando historial...';
+  detailHistoryMessage.hidden = false;
+  detailHistory.replaceChildren();
+  try {
+    const events = await apiJson(`/tickets/${ticket.id_ticket}/historial`);
+    if (request !== historyRequest) return;
+    renderHistory(detailHistory, events, formatDate);
+    detailHistoryMessage.hidden = true;
+  } catch (error) {
+    if (request !== historyRequest) return;
+    historyKey = null;
+    detailHistoryMessage.textContent = `No se pudo cargar el historial: ${error.message}`;
+  }
 }
 
 function isAdministrator() {
@@ -349,7 +403,14 @@ async function openAssignmentDialog(ticket) {
       select.append(option);
     }
 
-    if (ticket.id_tecnico) select.value = String(ticket.id_tecnico);
+    // El técnico actual queda visible pero no se puede volver a elegir.
+    for (const option of select.options) {
+      if (ticket.id_tecnico && option.value === String(ticket.id_tecnico)) {
+        option.disabled = true;
+        option.textContent += ' (asignado actualmente)';
+      }
+    }
+    select.focus();
     select.disabled = technicians.length === 0;
     actionDialogSubmit.disabled = technicians.length === 0;
     if (technicians.length === 0) {
@@ -393,7 +454,7 @@ function openStateDialog(ticket) {
   solution.name = 'texto_solucion';
   solution.rows = 4;
   solution.required = true;
-  solution.maxLength = 4000;
+  solution.maxLength = 2000;
   solution.placeholder = 'Describe la reparación realizada';
   solution.hidden = select.value !== 'Resuelto';
   solution.required = !solution.hidden;
@@ -408,6 +469,7 @@ function openStateDialog(ticket) {
   });
 
   openDialog(actionDialog);
+  select.focus();
 }
 
 function openCloseConfirmation(ticket) {
@@ -432,6 +494,7 @@ async function sendTicketAction(path, body, successMessage) {
     closeDialog(actionDialog);
     closeDialog(closeTicketDialog);
     showActionFeedback(successMessage);
+    historyKey = null;
     await loadTickets();
   } catch (error) {
     const errorElement = closeTicketDialog.open ? closeDialogError : actionDialogError;
@@ -500,12 +563,15 @@ function getVisibleTickets() {
     const matchesStatus = !status || ticket.estado === status;
     const matchesClassroom = !classroom || String(ticket.id_aula) === classroom;
     const searchableText = [
-      ticket.id_ticket,
+      formatTicketId(ticket.id_ticket),
       ticket.nombre_ticket,
       ticket.descripcion,
-      ticket.id_aula,
-      ticket.id_equipo,
+      classroomName(ticket),
+      equipmentName(ticket),
       ticket.estado,
+      ticket.nombre_reportante,
+      ticket.nombre_tecnico,
+      ...(ticket.problemas || []),
     ].join(' ').toLowerCase();
     const matchesSearch = !searchText || searchableText.includes(searchText);
 
@@ -519,7 +585,21 @@ function getVisibleTickets() {
   });
 }
 
+// En el celular los filtros viven detrás de dos botones; un punto avisa si hay alguno activo.
+function updateFilterIndicators() {
+  dateToggle.querySelector('.filters-toggle__dot').hidden = dateRange.length === 0;
+  filtersToggle.querySelector('.filters-toggle__dot').hidden = !statusFilter.value && !classroomFilter.value;
+}
+
+function togglePanel(button, className) {
+  const open = !filtersSection.classList.contains(className);
+  filtersSection.classList.toggle(className, open);
+  button.setAttribute('aria-expanded', String(open));
+  return open;
+}
+
 function renderTickets() {
+  updateFilterIndicators();
   const visibleTickets = getVisibleTickets();
   ticketsBody.replaceChildren();
 
@@ -568,7 +648,16 @@ function renderTickets() {
 
 function selectTicket(ticketId) {
   selectedTicketId = ticketId;
+  setDetailExpanded(false);
   renderTickets();
+}
+
+// En el celular el detalle se muestra resumido (estado, responsable y acciones);
+// "Ver más" despliega el resto. En escritorio el botón no se muestra.
+function setDetailExpanded(expanded) {
+  detailsSection.classList.toggle('is-expanded', expanded);
+  detailMoreButton.setAttribute('aria-expanded', String(expanded));
+  detailMoreButton.textContent = expanded ? 'Ver menos' : 'Ver más';
 }
 
 async function loadTickets() {
@@ -634,7 +723,21 @@ clearDateRange.addEventListener('click', () => {
 });
 classroomFilter.addEventListener('change', renderTickets);
 ticketSearch.addEventListener('input', renderTickets);
-refreshButton.addEventListener('click', loadTickets);
+dateToggle.addEventListener('click', () => {
+  if (togglePanel(dateToggle, 'show-dates')) datePicker.open();
+});
+filtersToggle.addEventListener('click', () => {
+  if (togglePanel(filtersToggle, 'show-filters')) statusFilter.focus();
+});
+detailMoreButton.addEventListener('click', () => {
+  setDetailExpanded(!detailsSection.classList.contains('is-expanded'));
+});
+
+refreshButton.addEventListener('click', () => {
+  // Una actualización manual vuelve a pedir el historial aunque el estado no haya cambiado.
+  historyKey = null;
+  loadTickets();
+});
 assignTicketButton.addEventListener('click', () => {
   const ticket = getSelectedTicket();
   if (ticket) openAssignmentDialog(ticket);
@@ -667,6 +770,8 @@ document.querySelectorAll('[data-close-dialog]').forEach((button) => {
 async function initializePage() {
   try {
     currentUser = await apiJson('/usuarios/me');
+    // Solo docentes y administradores crean tickets (el backend rechaza al resto).
+    newTicketButton.hidden = ![1, 3].includes(currentUser.id_rol);
   } catch (error) {
     showActionFeedback(`No se pudo cargar tu perfil: ${error.message}`, 'error');
   }

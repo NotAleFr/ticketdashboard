@@ -9,8 +9,6 @@ from app.models.aulas import Aula, Equipo
 from app.models.tracking import HistorialEstado, Solucion
 
 
-# from app.models.equipos import Equipo  # si tienes modelo de equipos
-
 # --- Estados válidos ---
 ESTADO_ABIERTO = EstadoTicket.ABIERTO.value
 ESTADO_EN_PROCESO = EstadoTicket.EN_PROCESO.value
@@ -26,53 +24,35 @@ TRANSICIONES_VALIDAS = {
 }
 
 
+def tickets_en_proceso(db: Session, id_equipo: int) -> bool:
+    db.flush()
+    return db.query(Ticket.id_ticket).filter(
+        Ticket.id_equipo == id_equipo,
+        Ticket.estado == ESTADO_EN_PROCESO,
+    ).first() is not None
+
+
+def sincronizar_estado_equipo(db: Session, id_equipo: int | None) -> None:
+    """Deriva Operativo/En Mantenimiento de los tickets en proceso del equipo."""
+    # Los tickets sin equipo específico no cambian el inventario.
+    if id_equipo is None:
+        return
+    equipo = (
+        db.query(Equipo)
+        .filter(Equipo.id_equipo == id_equipo)
+        .with_for_update()
+        .first()
+    )
+    # Un equipo dado de baja (Inoperativo) nunca vuelve a Operativo por un ticket.
+    if not equipo or equipo.estado_actual == "Inoperativo":
+        return
+    # Sigue en mantenimiento mientras cualquier ticket suyo esté en proceso.
+    equipo.estado_actual = (
+        "En Mantenimiento" if tickets_en_proceso(db, id_equipo) else "Operativo"
+    )
+
+
 class TicketService:
-
-    # ---------- ENRUTAMIENTO AUTOMÁTICO ----------
-
-    def crear_ticket(self, db: Session, datos: dict, usuario_creador: Usuario) -> Ticket:
-        """
-        Crea un ticket con id_tecnico = NULL para que caiga en la bandeja
-        del laboratorio correspondiente (enrutamiento automático).
-        """
-        # Validar que el aula exista
-        aula = db.query(Aula).filter(Aula.id == datos["id_aula"]).first()
-        if not aula:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="El aula especificada no existe",
-            )
-
-        # Validar consistencia de equipo si viene
-        if datos.get("id_equipo"):
-
-            pass
-
-        ticket = Ticket(
-            titulo=datos["titulo"],
-            descripcion=datos["descripcion"],
-            prioridad=datos.get("prioridad", "media"),
-            id_aula=datos["id_aula"],
-            id_usuario_creador=usuario_creador.id,
-            id_tecnico_asignado=None,   # ← clave del enrutamiento automático
-            estado=ESTADO_ABIERTO,
-        )
-
-        db.add(ticket)
-        db.commit()
-        db.refresh(ticket)
-        return ticket
-
-    def obtener_lider_del_laboratorio(self, db: Session, id_aula: int) -> Usuario | None:
-        """Devuelve el líder del laboratorio para notificarle."""
-        return (
-            db.query(Usuario)
-            .filter(
-                Usuario.laboratorio_asignado_id == id_aula,
-                Usuario.is_leader == True,  # noqa: E712
-            )
-            .first()
-        )
 
     # ---------- ASIGNACIÓN DE TÉCNICO ----------
 
@@ -107,16 +87,23 @@ class TicketService:
         if ticket.estado not in {ESTADO_ABIERTO, ESTADO_EN_PROCESO}:
             raise HTTPException(400, "Solo se pueden asignar tickets abiertos o en proceso")
 
+        if ticket.id_tecnico == tecnico.id_usuario:
+            raise HTTPException(400, "El ticket ya está asignado a ese técnico")
+
         estado_anterior = ticket.estado
         ticket.id_tecnico = tecnico.id_usuario
         ticket.estado = ESTADO_EN_PROCESO
 
-        self._registrar_historial(
-            db, ticket, estado_anterior, ticket.estado, usuario
-        )
-        self._actualizar_estado_equipo(db, ticket)
+        try:
+            self._registrar_historial(
+                db, ticket, estado_anterior, ticket.estado, usuario
+            )
+            sincronizar_estado_equipo(db, ticket.id_equipo)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
-        db.commit()
         db.refresh(ticket)
         return ticket
 
@@ -202,7 +189,7 @@ class TicketService:
             self._registrar_historial(
                 db, ticket, estado_anterior, nuevo_estado, usuario
             )
-            self._actualizar_estado_equipo(db, ticket)
+            sincronizar_estado_equipo(db, ticket.id_equipo)
             db.commit()
         except Exception:
             db.rollback()
@@ -215,7 +202,13 @@ class TicketService:
     # ---------- HELPERS PRIVADOS ----------
 
     def _obtener_ticket(self, db: Session, id_ticket: int) -> Ticket:
-        ticket = db.query(Ticket).filter(Ticket.id_ticket == id_ticket).first()
+        # Bloquea la fila: dos transiciones simultáneas no pueden partir del mismo estado.
+        ticket = (
+            db.query(Ticket)
+            .filter(Ticket.id_ticket == id_ticket)
+            .with_for_update()
+            .first()
+        )
         if not ticket:
             raise HTTPException(404, "Ticket no encontrado")
         return ticket
@@ -235,25 +228,6 @@ class TicketService:
             id_usuario=usuario.id_usuario,
         )
         db.add(historial)
-
-
-    def _actualizar_estado_equipo(self, db: Session, ticket: Ticket) -> None:
-        # Los tickets sin equipo específico no cambian el inventario.
-        if ticket.id_equipo is None:
-            return
-
-        equipo = (
-            db.query(Equipo)
-            .filter(Equipo.id_equipo == ticket.id_equipo)
-            .first()
-        )
-        if not equipo:
-            raise HTTPException(404, "Equipo no encontrado")
-
-        if ticket.estado == ESTADO_EN_PROCESO:
-            equipo.estado_actual = "En Mantenimiento"
-        elif ticket.estado in {ESTADO_RESUELTO, ESTADO_CERRADO}:
-            equipo.estado_actual = "Operativo"
 
 
     def _es_admin(self, usuario: Usuario) -> bool:

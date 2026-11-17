@@ -1,4 +1,5 @@
 import { apiFetch, apiJson } from '../../api.js';
+import { renderHistory } from './ticket-history.js';
 
 const $ = (selector) => document.querySelector(selector);
 const stateFilter = $('#filtro-estado');
@@ -8,6 +9,12 @@ const tableArea = $('.table-responsive');
 const message = $('#report-message');
 const exportButton = $('#export-report');
 const dialog = $('#ticket-detail');
+const filtersCard = $('.filters-card');
+const retryButton = $('#apply-filters');
+const periodToggle = $('#period-toggle');
+const mainFiltersToggle = $('#main-filters-toggle');
+const detailHistorySection = $('.detail-history');
+const DEFAULT_PERIOD = 'ultimo-mes';
 const states = ['Abierto', 'En Proceso', 'Resuelto', 'Cerrado'];
 const colors = ['pendiente', 'en-proceso', 'resuelto', 'cerrado'];
 let applied = readFilters();
@@ -16,6 +23,8 @@ let busy = false;
 let detailRequest = 0;
 let pageSize = 1;
 let resizeTimer;
+// Botón de paginación que tenía el foco: se recupera después de recargar la página.
+let pendingFocus = null;
 
 function rowsThatFit() {
   const headerHeight = $('.tickets-table thead').getBoundingClientRect().height;
@@ -25,6 +34,8 @@ function rowsThatFit() {
 
 function fitRows() {
   if (busy || !report) return;
+  // La tarjeta encogida ya muestra todo; medirla achicaría la página sin motivo.
+  if (tableArea.closest('.table-card').classList.contains('fits-content')) return;
   const size = rowsThatFit();
   if (size === pageSize) return;
   // Conserva visible el primer ticket al cambiar el tamaño de la ventana.
@@ -154,7 +165,10 @@ function renderPages(data) {
     button.disabled = disabled;
     button.setAttribute('aria-label', label === '‹' ? 'Página anterior' : label === '›' ? 'Página siguiente' : `Página ${page}`);
     if (active) button.setAttribute('aria-current', 'page');
-    button.addEventListener('click', () => load(page));
+    button.addEventListener('click', () => {
+      pendingFocus = button.getAttribute('aria-label');
+      load(page);
+    });
     pages.append(button);
   }
   add('‹', data.pagina - 1, data.pagina === 1);
@@ -188,29 +202,64 @@ async function load(page = 1) {
     report.laboratorios.forEach((lab) => labFilter.add(new Option(`${lab.nombre}${lab.activo === false ? ' (inactivo)' : ''}`, lab.id_aula)));
     labFilter.value = report.laboratorios.some((lab) => String(lab.id_aula) === selected) ? selected : 'todos';
     render(report);
+    // Con todos los tickets en una página, la tarjeta se ajusta a su contenido (sin hueco vacío).
+    tableArea.closest('.table-card').classList.toggle('fits-content', report.total <= pageSize);
     message.textContent = report.total ? '' : 'No se encontraron tickets con estos filtros.';
+    retryButton.hidden = true;
   } catch (error) {
     clearData('No se pudieron cargar los reportes.');
-    message.textContent = `Error: ${error.message}. Usa Aplicar filtros para reintentar.`;
+    message.textContent = `Error: ${error.message}.`;
+    retryButton.hidden = false;
   } finally {
     setBusy(false);
     // renderPages establece los límites de navegación después de habilitar los controles.
     if (report) renderPages(report);
+    restorePaginationFocus();
     requestAnimationFrame(fitRows);
   }
+}
+
+function restorePaginationFocus() {
+  if (!pendingFocus) return;
+  const buttons = [...document.querySelectorAll('#report-pages button')];
+  const same = buttons.find((button) => button.getAttribute('aria-label') === pendingFocus && !button.disabled);
+  (same || buttons.find((button) => button.getAttribute('aria-current') === 'page'))?.focus();
+  pendingFocus = null;
+}
+
+function dateTime(value) {
+  if (!value) return '—';
+  const utc = /Z$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
+  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Hermosillo' }).format(new Date(utc));
 }
 
 async function showDetail(row) {
   const request = ++detailRequest;
   $('#ticket-detail-title').textContent = `Detalle del ticket ${id(row.id_ticket)}`;
   $('#ticket-detail-fields').replaceChildren();
+  detailHistorySection.hidden = true;
   $('#detail-message').textContent = 'Cargando detalle…';
   dialog.showModal();
   try {
-    const ticket = await apiJson(`/tickets/${row.id_ticket}`);
+    const [ticket, events] = await Promise.all([
+      apiJson(`/tickets/${row.id_ticket}`),
+      apiJson(`/tickets/${row.id_ticket}/historial`),
+    ]);
     if (request !== detailRequest || !dialog.open) return;
-    const fields = [['Título', ticket.nombre_ticket], ['Descripción', ticket.descripcion], ['Estado', ticket.estado], ['Aula', row.nombre_aula], ['Equipo', row.equipo || 'Sin equipo'], ['Fecha', date(ticket.fecha_registro)], ['Responsable', row.nombre_tecnico || 'Sin asignar'], ['Reportante', row.nombre_reportante]];
-    fields.forEach(([label, value]) => $('#ticket-detail-fields').append(element('dt', '', label), element('dd', '', value)));
+    const status = element('span', `badge-status badge-${colors[states.indexOf(ticket.estado)]}`, ticket.estado);
+    const categories = element('span', 'detail-chips');
+    (ticket.problemas?.length ? ticket.problemas : ['Sin categoría']).forEach((name) => {
+      categories.append(element('span', 'detail-chip', name));
+    });
+    const fields = [['Título', ticket.nombre_ticket], ['Descripción', ticket.descripcion], ['Estado', status], ['Categorías', categories], ['Aula', row.nombre_aula], ['Equipo', row.equipo || 'Sin equipo'], ['Fecha', date(ticket.fecha_registro)], ['Responsable', row.nombre_tecnico || 'Sin asignar'], ['Reportante', row.nombre_reportante]];
+    fields.forEach(([label, value]) => {
+      const dd = element('dd', '');
+      if (value instanceof Node) dd.append(value);
+      else dd.textContent = value;
+      $('#ticket-detail-fields').append(element('dt', '', label), dd);
+    });
+    renderHistory($('#detail-history'), events, dateTime);
+    detailHistorySection.hidden = false;
     $('#detail-message').textContent = '';
   } catch (error) {
     if (request === detailRequest && dialog.open) $('#detail-message').textContent = `No se pudo cargar el detalle: ${error.message}`;
@@ -219,12 +268,39 @@ async function showDetail(row) {
 
 $('#close-detail').addEventListener('click', () => dialog.close());
 dialog.addEventListener('close', () => { detailRequest++; });
-$('#apply-filters').addEventListener('click', () => { applied = readFilters(); load(); });
+// Los filtros se aplican en cuanto cambian (los selects se desactivan mientras carga).
+function applyFilters() {
+  applied = readFilters();
+  updateFilterIndicators();
+  load();
+}
+
+// En el celular los filtros viven detrás de dos botones; un punto avisa si hay alguno activo.
+function updateFilterIndicators() {
+  periodToggle.querySelector('.filters-toggle__dot').hidden = periodFilter.value === DEFAULT_PERIOD;
+  mainFiltersToggle.querySelector('.filters-toggle__dot').hidden =
+    stateFilter.value === 'todos' && labFilter.value === 'todos';
+}
+
+function togglePanel(button, className) {
+  const open = !filtersCard.classList.contains(className);
+  filtersCard.classList.toggle(className, open);
+  button.setAttribute('aria-expanded', String(open));
+  return open;
+}
+
+[stateFilter, labFilter, periodFilter].forEach((select) => select.addEventListener('change', applyFilters));
+retryButton.addEventListener('click', () => load());
+periodToggle.addEventListener('click', () => {
+  if (togglePanel(periodToggle, 'show-period')) periodFilter.focus();
+});
+mainFiltersToggle.addEventListener('click', () => {
+  if (togglePanel(mainFiltersToggle, 'show-main')) stateFilter.focus();
+});
 $('#clear-filters').addEventListener('click', () => {
   stateFilter.value = labFilter.value = 'todos';
-  periodFilter.value = 'ultimo-mes';
-  applied = readFilters();
-  load();
+  periodFilter.value = DEFAULT_PERIOD;
+  applyFilters();
 });
 new ResizeObserver(() => {
   clearTimeout(resizeTimer);
@@ -250,6 +326,8 @@ exportButton.addEventListener('click', async () => {
   } finally {
     setBusy(false);
     if (report) renderPages(report);
+    // Un cambio de tamaño durante la exportación se ignoró por estar ocupado: se recalcula ahora.
+    requestAnimationFrame(fitRows);
   }
 });
 

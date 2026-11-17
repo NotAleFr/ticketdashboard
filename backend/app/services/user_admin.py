@@ -33,6 +33,9 @@ def auth_request(method, path, payload=None):
 
 
 def auth_metadata(db):
+    # auth.users solo existe en Supabase (PostgreSQL); en SQLite local no hay metadatos.
+    if db.bind.dialect.name != "postgresql":
+        return {}
     return {str(row['id']): dict(row) for row in db.execute(text(
         "SELECT id, last_sign_in_at, banned_until FROM auth.users"
     )).mappings()}

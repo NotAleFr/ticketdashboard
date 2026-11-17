@@ -16,34 +16,51 @@ const savePasswordButton = document.getElementById('save-password-button');
 const confirmLogoutButton = document.getElementById('confirm-logout-button');
 const logoutError = document.getElementById('logout-error');
 let pendingAccountAction = false;
+// Cuentas con contraseña temporal no pueden cerrar el diálogo hasta cambiarla.
+let forcedPasswordChange = false;
 const ticketCard = document.getElementById('tickets-card');
 const ticketTitle = document.getElementById('tickets-card-title');
 const adminUsersCard = document.getElementById('admin-users-card');
 const reportsCard = document.getElementById('reports-card');
 const reportsTitle = document.getElementById('reports-card-title');
 const dashboardMessage = document.getElementById('dashboard-message');
+const dashboardGrid = document.getElementById('dashboard-grid');
+const dashboardError = document.getElementById('dashboard-error');
+const forcedLogoutButton = document.getElementById('forced-logout-button');
 
-function getRoleLabel(user) {
-  if (user.id_rol === 1) return 'admin';
-  if (user.id_rol === 3) return 'docente';
-  if (user.id_rol === 2) return 'soporte';
-  return 'usuario';
+// Nombres de rol tal como existen en el sistema (tabla de roles).
+function getRoleName(user) {
+  if (user.id_rol === 1) return 'Administrador';
+  if (user.id_rol === 2) return user.is_leader ? 'Técnico líder' : 'Técnico';
+  if (user.id_rol === 3) return 'Docente';
+  return 'Usuario';
+}
+
+function getSessionLabel(user) {
+  const name = [user.nombre, user.apellido].filter(Boolean).join(' ').trim();
+  return name ? `${name} · ${getRoleName(user)}` : getRoleName(user);
 }
 
 async function loadDashboard() {
+  dashboardError.hidden = true;
+  roleLabel.textContent = 'Cargando...';
   try {
     const user = await apiJson('/usuarios/me');
 
-    roleLabel.textContent = getRoleLabel(user);
+    roleLabel.textContent = getSessionLabel(user);
+    if (user.debe_cambiar_password) openPasswordDialog(true);
 
     if (user.id_rol === 3) {
       ticketTitle.textContent = 'Añadir tickets';
       ticketCard.href = './src/pages/gestion/nuevo.html';
-      reportsTitle.textContent = '¿Cómo sirven los reportes?';
+      // El docente consulta el seguimiento de sus propios tickets en la gestión.
+      reportsTitle.textContent = 'Mis tickets';
+      reportsCard.href = './src/pages/gestion/gestion.html';
     } else {
       ticketTitle.textContent = 'Gestión de tickets';
       ticketCard.href = './src/pages/gestion/gestion.html';
       reportsTitle.textContent = 'Historial de reportes';
+      reportsCard.href = './src/pages/gestion/reportes.html';
     }
 
     // La administración solo se muestra al administrador.
@@ -52,9 +69,12 @@ async function loadDashboard() {
     const canViewReports = [1, 2, 3].includes(user.id_rol);
     reportsCard.hidden = !canViewReports;
     reportsCard.classList.toggle('dashboard-card--wide', user.id_rol !== 1);
+    // Las tarjetas se muestran solo cuando ya apuntan al destino correcto del rol.
+    dashboardGrid.hidden = false;
   } catch (error) {
-    dashboardMessage.textContent = `No se pudo cargar el perfil: ${error.message}`;
-    dashboardMessage.hidden = false;
+    roleLabel.textContent = 'Sin perfil';
+    dashboardMessage.textContent = `No se pudo cargar tu perfil: ${error.message}`;
+    dashboardError.hidden = false;
   }
 }
 
@@ -90,28 +110,48 @@ function setAccountBusy(dialog, busy) {
   dialog.querySelectorAll('button, input').forEach(control => { control.disabled = busy; });
 }
 
-document.getElementById('change-password-button').addEventListener('click', () => {
-  document.getElementById('password-heading').textContent = 'Cambiar contraseña';
-  document.getElementById('password-description').textContent = 'Elige una contraseña nueva para tu cuenta.';
+function setForcedPasswordChange(forced) {
+  forcedPasswordChange = forced;
+  passwordDialog.querySelectorAll('.dialog-close, #password-form [data-close-account-dialog]')
+    .forEach(button => { button.hidden = forced; });
+  // Sin poder cerrar el diálogo, la única salida alternativa es cerrar sesión.
+  forcedLogoutButton.hidden = !forced;
+}
+
+function openPasswordDialog(forced = false) {
+  setForcedPasswordChange(forced);
+  document.getElementById('password-heading').textContent = forced ? 'Crea tu contraseña' : 'Cambiar contraseña';
+  document.getElementById('password-description').textContent = forced
+    ? 'Tu cuenta usa una contraseña temporal. Crea una nueva para continuar.'
+    : 'Elige una contraseña nueva para tu cuenta.';
   passwordForm.reset();
   confirmPassword.setCustomValidity('');
   passwordError.hidden = true;
   passwordSuccess.hidden = true;
   passwordForm.hidden = false;
-  openAccountDialog(passwordDialog);
-});
+  if (forced) {
+    closeSettings();
+    passwordDialog.showModal();
+  } else {
+    openAccountDialog(passwordDialog);
+  }
+}
+
+document.getElementById('change-password-button').addEventListener('click', () => openPasswordDialog());
 logoutButton.addEventListener('click', () => {
   logoutError.hidden = true;
   openAccountDialog(logoutDialog);
 });
 document.querySelectorAll('[data-close-account-dialog]').forEach(button => {
   button.addEventListener('click', () => {
-    if (!pendingAccountAction) button.closest('dialog').close();
+    const dialog = button.closest('dialog');
+    if (pendingAccountAction || (dialog === passwordDialog && forcedPasswordChange)) return;
+    dialog.close();
   });
 });
 [passwordDialog, logoutDialog].forEach(dialog => {
   dialog.addEventListener('cancel', (event) => {
-    if (pendingAccountAction) event.preventDefault();
+    if (pendingAccountAction || (dialog === passwordDialog && forcedPasswordChange)) event.preventDefault();
   });
   dialog.addEventListener('close', () => {
     passwordForm.reset();
@@ -139,6 +179,7 @@ passwordForm.addEventListener('submit', async (event) => {
     passwordForm.reset();
     passwordForm.hidden = true;
     passwordSuccess.hidden = false;
+    setForcedPasswordChange(false);
     document.getElementById('password-heading').textContent = 'Contraseña actualizada';
     document.getElementById('password-description').textContent = 'Ya puedes usar tu nueva contraseña para iniciar sesión.';
   } catch (error) {
@@ -151,11 +192,12 @@ passwordForm.addEventListener('submit', async (event) => {
   }
 });
 
-confirmLogoutButton.addEventListener('click', async () => {
+async function signOutAndLeave(dialog, button, errorTarget) {
   if (pendingAccountAction) return;
-  logoutError.hidden = true;
-  setAccountBusy(logoutDialog, true);
-  confirmLogoutButton.textContent = 'Cerrando sesión...';
+  const label = button.textContent;
+  errorTarget.hidden = true;
+  setAccountBusy(dialog, true);
+  button.textContent = 'Cerrando sesión...';
 
   try {
     const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
@@ -163,11 +205,17 @@ confirmLogoutButton.addEventListener('click', async () => {
 
     window.location.replace('/src/pages/login/login.html');
   } catch (error) {
-    logoutError.textContent = `No se pudo cerrar sesión: ${error.message}`;
-    logoutError.hidden = false;
-    setAccountBusy(logoutDialog, false);
-    confirmLogoutButton.textContent = 'Sí, cerrar sesión';
+    errorTarget.textContent = `No se pudo cerrar sesión: ${error.message}`;
+    errorTarget.hidden = false;
+    setAccountBusy(dialog, false);
+    button.textContent = label;
   }
-});
+}
 
+confirmLogoutButton.addEventListener('click',
+  () => signOutAndLeave(logoutDialog, confirmLogoutButton, logoutError));
+forcedLogoutButton.addEventListener('click',
+  () => signOutAndLeave(passwordDialog, forcedLogoutButton, passwordError));
+
+document.getElementById('dashboard-retry').addEventListener('click', loadDashboard);
 loadDashboard();

@@ -4,8 +4,20 @@ import { getAccessToken } from './auth/session.js';
 // Dirección base de FastAPI. Si no está en .env, usa esta por defecto.
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Debe coincidir con el detalle que devuelve backend/app/core/deps.py.
+export const PASSWORD_CHANGE_REQUIRED = 'Debes cambiar tu contraseña temporal antes de continuar.';
+
 function redirectToLogin() {
   window.location.href = '/src/pages/login/login.html';
+}
+
+// FastAPI devuelve un texto o, en errores de validación (422), una lista de objetos.
+function errorMessage(detail, status) {
+  if (typeof detail === 'string' && detail) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    return detail.map((item) => item?.msg || String(item)).join(' · ');
+  }
+  return `Error HTTP ${status}`;
 }
 
 export async function apiFetch(path, options = {}) {
@@ -36,18 +48,21 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!response.ok) {
-    let message = `Error HTTP ${response.status}`;
+    let detail;
 
     try {
-      const errorData = await response.json();
-      if (errorData.detail) {
-        message = errorData.detail;
-      }
+      detail = (await response.json()).detail;
     } catch {
       // La respuesta no siempre incluye un mensaje JSON.
     }
 
-    throw new Error(message);
+    // Con contraseña temporal solo el panel (que obliga a cambiarla) puede operar.
+    if (response.status === 403 && detail === PASSWORD_CHANGE_REQUIRED
+        && !window.location.pathname.endsWith('/dashboard.html')) {
+      window.location.href = '/dashboard.html';
+    }
+
+    throw new Error(errorMessage(detail, response.status));
   }
 
   return response;

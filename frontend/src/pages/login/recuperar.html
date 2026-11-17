@@ -6,45 +6,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Recuperar contraseña | Tickets</title>
   <link href="./login.css" rel="stylesheet" type="text/css" media="all">
-  <link rel="icon" type="image/x-icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
-  <!-- Esto es para conectarse a la fuente-->
+  <link rel="icon" type="image/png" href="/imgs/logo-buho-96.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
     rel="stylesheet">
-  <!-- Si lo quieren quitar, descarguen y coloquen la fuente en el proyecto -->
 </head>
 
 <body>
-  <div class="ma columna" style="height: 100%;width: 100%;">
-    <div class="azulCover ma columna" style="height: 70%; width: 70%; position: relative; box-sizing: border-box">
-      <form id="recovery-form" class="whitebox ma columna" style="width: 100%; max-width: 30rem; box-sizing: border-box">
+  <main class="auth">
+    <div class="auth__frame">
+      <div class="auth__card">
+        <h1 class="auth__title">Recuperar contraseña</h1>
+        <p class="auth__lead">Ingresa tu correo y te enviaremos un enlace para crear una contraseña nueva.</p>
 
-        <p class="titulo">Recuperar contraseña</p>
-        <p class="gris">Ingresa tu correo y te enviaremos un enlace para crear una contraseña nueva.</p>
+        <form id="recovery-form" class="auth__form">
+          <div class="auth__field">
+            <label for="email">Correo electrónico</label>
+            <input id="email" class="auth__input" name="email" type="email" placeholder="tu@unison.mx"
+              autocomplete="email" required>
+          </div>
 
-        <label for="email">Correo electrónico</label>
-        <input id="email" name="email" type="email" placeholder="tu@unison.mx" autocomplete="email" required>
+          <p id="recovery-error" class="auth__message auth__message--error" role="alert" hidden></p>
+          <p id="recovery-success" class="auth__message auth__message--success" role="status" hidden></p>
 
-        <p id="recovery-error" class="gris" role="alert" aria-live="polite" hidden></p>
-        <p id="recovery-success" role="status" aria-live="polite" style="color: green;" hidden></p>
+          <input id="recovery-btn" class="auth__submit" type="submit" value="Enviar enlace">
+        </form>
 
-        <input id="recovery-btn" class="btn" style="width: 100%;" type="submit" value="Enviar enlace">
-
-        <p style="margin-top: 1rem; align-self: center;">
-          <a href="./login.html" style="color: #24398A; text-decoration: underline;">Volver a iniciar sesión</a>
-        </p>
-      </form>
-
-      <div
-        class="login-outline"
-        aria-hidden="true"
-        style="position: absolute; top: -30px; left: -30px; bottom: -30px; right: -30px; border: 5px #24398A solid; border-radius: 3rem; z-index: -1;">
+        <p class="auth__footer"><a class="auth__link" href="./login.html">Volver a iniciar sesión</a></p>
       </div>
-
     </div>
-  </div>
+  </main>
   <script type="module" src="./recuperar.js"></script>
 </body>
 

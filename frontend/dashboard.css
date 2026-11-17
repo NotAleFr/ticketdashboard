@@ -2,7 +2,7 @@
   --dashboard-blue: #263d8c;
   --dashboard-gold: #f0ad32;
   --dashboard-text: #182235;
-  --dashboard-muted: #7b8798;
+  --dashboard-muted: #5b6577;
 }
 
 * {
@@ -36,7 +36,15 @@ body.dashboard-page {
   font-size: 1.3rem;
 }
 
+#dashboard-role-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .settings-toggle {
+  flex: 0 0 auto;
   display: grid;
   width: 38px;
   height: 38px;
@@ -142,7 +150,7 @@ body.dashboard-page {
 }
 
 .dashboard-card__secondary-title {
-  color: var(--dashboard-gold);
+  color: var(--dashboard-blue);
   font-size: clamp(1.2rem, 2vw, 1.8rem);
 }
 
@@ -181,19 +189,43 @@ body.dashboard-page {
   min-height: 190px;
 }
 
-.dashboard-card--users {
-  appearance: none;
-  cursor: not-allowed;
-  font: inherit;
-  text-align: left;
+.dashboard-card {
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(24, 39, 91, .18);
+}
+
+.dashboard-card:focus-visible {
+  outline: 3px solid var(--dashboard-blue);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-card { transition: none; }
+  .dashboard-card:hover { transform: none; }
 }
 
 .dashboard-message {
-  margin: 18px 0 0;
+  margin: 0;
   color: #b42318;
 }
 
+.dashboard-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+
+.dashboard-error[hidden] {
+  display: none;
+}
+
 .dashboard-message[hidden],
+.dashboard-grid[hidden],
 .dashboard-card[hidden] {
   display: none;
 }
@@ -269,13 +301,13 @@ button, input { font: inherit; }
 .settings-toggle { width: 44px; height: 44px; border: 1px solid transparent; border-radius: 12px; }
 .settings-toggle[aria-expanded="true"] { background: #263d8c; color: #fff; box-shadow: 0 4px 12px #263d8c26; }
 .settings-toggle:focus-visible, .settings-option:focus-visible, .account-button:focus-visible, .dialog-close:focus-visible {
-  outline: 3px solid var(--dashboard-gold); outline-offset: 3px;
+  outline: 3px solid var(--dashboard-blue); outline-offset: 3px;
 }
 .settings-panel { position: absolute; right: 0; top: calc(100% + 12px); z-index: 10; width: 264px;
   max-width: calc(100vw - 32px); padding: 10px; border: 1px solid #e5e9f0; border-radius: 18px;
   background: #fff; box-shadow: 0 12px 36px #18275b26; font-size: .93rem; }
-.settings-panel[hidden], #password-form[hidden], #password-success[hidden] { display: none; }
-.settings-heading { margin: 5px 12px 9px; font-size: .75rem; font-weight: 700; color: #7b8798; }
+.settings-panel[hidden], .account-dialog [hidden] { display: none; }
+.settings-heading { margin: 5px 12px 9px; font-size: .75rem; font-weight: 700; color: var(--dashboard-muted); }
 .settings-option { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 10px 12px;
   border: 0; border-radius: 10px; background: transparent; color: var(--dashboard-blue); cursor: pointer; text-align: left; }
 .settings-option:hover { background: #eef2fb; }
@@ -287,16 +319,16 @@ button, input { font: inherit; }
   background: #fff; box-shadow: 0 24px 80px #18275b40; }
 .account-dialog::backdrop { background: #101c3f80; backdrop-filter: blur(4px); }
 .account-dialog h1 { margin: 18px 0 10px; font-size: 1.45rem; letter-spacing: -.025em; }
-.account-dialog__description { margin: 0 0 24px; color: #647085; line-height: 1.6; font-size: .93rem; }
+.account-dialog__description { margin: 0 0 24px; color: var(--dashboard-muted); line-height: 1.6; font-size: .93rem; }
 .account-dialog__icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; background: #eef2fb; color: var(--dashboard-blue); }
 .account-dialog__icon svg { width: 26px; height: 26px; }
 .dialog-close { position: absolute; right: 16px; top: 16px; display: grid; place-items: center;
   width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: #647085; font-size: 1.6rem; cursor: pointer; }
 .dialog-close:hover { background: #eef2fb; }
 .account-dialog label { display: block; margin: 18px 0 8px; font-size: .87rem; font-weight: 600; }
-.account-dialog input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid #cdd5e2; border-radius: 10px; }
+.account-dialog input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid #7b8497; border-radius: 10px; }
 .account-dialog input:focus { outline: 3px solid #263d8c20; border-color: var(--dashboard-blue); }
-.field-hint { margin: 7px 0 0; color: #647085; font-size: .78rem; }
+.field-hint { margin: 7px 0 0; color: var(--dashboard-muted); font-size: .78rem; }
 .account-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 28px; }
 .account-button { min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: 12px; font-size: .87rem; font-weight: 600; cursor: pointer; }
 .account-button--secondary { border-color: #d9dfeb; background: #fff; color: #47536a; }

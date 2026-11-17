@@ -36,6 +36,8 @@ class UsuarioRead(UsuarioBase):
 class UsuarioAdminRead(UsuarioRead):
     estado: str
     ultimo_acceso: Optional[datetime] = None
+    # Tickets "En Proceso" asignados: el panel avisa antes de suspender o quitar el rol.
+    tickets_en_proceso: int = 0
 
 
 class UsuarioProvisionado(UsuarioRead):
