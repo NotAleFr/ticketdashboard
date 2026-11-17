@@ -110,46 +110,22 @@ function getStatusClass(status) {
   return classes[status] || 'status-badge--unknown';
 }
 
-function createViewButton(ticket) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'view-ticket-button';
-  button.setAttribute('aria-label', `Ver detalle del ticket ${ticket.id_ticket}`);
-  button.title = 'Ver detalle';
-
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 24 24');
-  icon.setAttribute('fill', 'none');
-  icon.setAttribute('stroke', 'currentColor');
-  icon.setAttribute('stroke-width', '2');
-  icon.setAttribute('stroke-linecap', 'round');
-  icon.setAttribute('stroke-linejoin', 'round');
-  icon.setAttribute('aria-hidden', 'true');
-
-  const eye = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  eye.setAttribute('d', 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z');
-
-  const pupil = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  pupil.setAttribute('cx', '12');
-  pupil.setAttribute('cy', '12');
-  pupil.setAttribute('r', '3');
-
-  icon.append(eye, pupil);
-  button.append(icon);
-  button.addEventListener('click', (event) => {
-    event.stopPropagation();
-    selectTicket(ticket.id_ticket);
-  });
-
-  return button;
-}
-
 function createTicketRow(ticket) {
   const row = document.createElement('tr');
   row.className = 'ticket-row';
   row.dataset.ticketId = String(ticket.id_ticket);
   row.classList.toggle('is-selected', ticket.id_ticket === selectedTicketId);
+  // Toda la fila selecciona el ticket (clic, Enter o espacio).
+  row.tabIndex = 0;
+  row.setAttribute('aria-label', `Ver detalle del ticket ${formatTicketId(ticket.id_ticket)}`);
   row.addEventListener('click', () => selectTicket(ticket.id_ticket));
+  row.addEventListener('keydown', (event) => {
+    if (event.target !== row || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    selectTicket(ticket.id_ticket);
+    // La lista se reconstruye: el foco vuelve a la misma fila.
+    ticketsBody.querySelector(`tr[data-ticket-id="${ticket.id_ticket}"]`)?.focus();
+  });
 
   row.append(createTextCell(formatTicketId(ticket.id_ticket), 'ticket-id'));
 
@@ -188,11 +164,6 @@ function createTicketRow(ticket) {
 
   const assignee = ticket.nombre_tecnico || (ticket.id_tecnico ? 'Nombre no disponible' : 'Sin asignar');
   row.append(createTextCell(assignee, ticket.id_tecnico ? 'ticket-assignee' : 'ticket-assignee assignee-muted'));
-
-  const actionCell = document.createElement('td');
-  actionCell.className = 'ticket-action';
-  actionCell.append(createViewButton(ticket));
-  row.append(actionCell);
 
   return row;
 }

@@ -939,15 +939,16 @@ body {
 .pagination-controls { flex-wrap: wrap; }
 button:disabled, select:disabled { opacity: 0.5; cursor: default; }
 .reportes-header { flex-wrap: wrap; }
-#report-users-link { margin-left: auto; }
 .table-responsive { min-height: 0; overflow-y: auto; flex: 1; }
 .table-card { min-height: 140px; }
 .table-pagination { flex-shrink: 0; min-height: 45px; }
 .tickets-table { --report-row-height: 45px; table-layout: fixed; min-width: 960px; }
-.tickets-table tbody tr { height: var(--report-row-height); }
+.tickets-table tbody tr { height: var(--report-fill-height, var(--report-row-height)); }
+.report-row { cursor: pointer; }
+.report-row:hover { background-color: #f6f9ff; }
+.report-row:focus-visible { outline: 2px solid var(--secundario); outline-offset: -2px; }
 .tickets-table td { line-height: 14px; }
 .tickets-table th.th-id { width: 64px; }
-.tickets-table th.th-acciones { width: 90px; }
 .td-id .report-cell-text { display: block; white-space: nowrap; overflow-wrap: normal; }
 .chart-card { min-width: 0; }
 .report-cell-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-height: 28px; overflow-wrap: anywhere; }
@@ -1023,8 +1024,8 @@ button:disabled, select:disabled { opacity: 0.5; cursor: default; }
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      "titulo titulo acciones"
-      "estado fecha acciones"
+      "titulo titulo titulo"
+      "estado fecha fecha"
       "aula aula equipo"
       "resp resp resp";
     align-content: center;
@@ -1061,7 +1062,6 @@ button:disabled, select:disabled { opacity: 0.5; cursor: default; }
   .td-aula { grid-area: aula; font-size: 13px; }
   .td-equipo { grid-area: equipo; color: var(--text-muted); font-size: 12px; text-align: right; }
   .td-responsable { grid-area: resp; color: var(--text-muted); font-size: 12px; }
-  .td-acciones { grid-area: acciones; align-self: center; }
 
   .td-responsable .report-cell-text::before {
     content: "Responsable: ";
@@ -1195,3 +1195,6 @@ button:disabled, select:disabled { opacity: 0.5; cursor: default; }
 @media (max-width: 1100px) {
   .table-card.fits-content { height: auto; }
 }
+
+/* El encabezado del detalle (con "Cerrar") queda fijo si el contenido se desplaza. */
+#ticket-detail .detail-header { position: sticky; top: -22px; z-index: 1; margin: -22px -22px 0; padding: 22px 22px 10px; background: #fff; }

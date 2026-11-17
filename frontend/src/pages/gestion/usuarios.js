@@ -81,18 +81,7 @@ function render() {
     row.querySelector('.td-acceso').textContent = date(user.ultimo_acceso);
     row.querySelector('.td-acceso').classList.toggle('sin-acceso', !user.ultimo_acceso);
     const select = () => { selectedId = user.id_usuario; render(); };
-    row.addEventListener('click', select);
-    row.addEventListener('keydown', (event) => {
-      if (event.target === row && ['Enter', ' '].includes(event.key)) { event.preventDefault(); select(); }
-    });
-    const buttons = row.querySelectorAll('button');
-    buttons[0].title = `Editar usuario ${fullName(user)}`;
-    buttons[0].setAttribute('aria-label', buttons[0].title);
-    buttons[0].addEventListener('click', (event) => { event.stopPropagation(); select(); openDialog('edit'); });
-    buttons[1].title = `Ver detalle de ${fullName(user)}`;
-    buttons[1].setAttribute('aria-label', buttons[1].title);
-    buttons[1].addEventListener('click', (event) => {
-      event.stopPropagation();
+    row.addEventListener('click', () => {
       select();
       // En el celular el detalle queda debajo de la lista.
       if (mobile.matches) {
@@ -100,6 +89,13 @@ function render() {
         actions[0].focus({ preventScroll: true });
       }
     });
+    row.addEventListener('keydown', (event) => {
+      if (event.target === row && ['Enter', ' '].includes(event.key)) { event.preventDefault(); select(); }
+    });
+    const buttons = row.querySelectorAll('button');
+    buttons[0].title = `Editar usuario ${fullName(user)}`;
+    buttons[0].setAttribute('aria-label', buttons[0].title);
+    buttons[0].addEventListener('click', (event) => { event.stopPropagation(); select(); openDialog('edit'); });
     body.append(row);
   }
   if (!visible.length) {

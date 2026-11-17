@@ -32,12 +32,24 @@ function rowsThatFit() {
   return Math.max(1, Math.min(100, Math.floor((tableArea.clientHeight - headerHeight - 2) / rowHeight)));
 }
 
+// Con la página llena, el alto que sobra (menos de una fila) se reparte entre las filas.
+function stretchRows() {
+  const rows = report?.tickets.length || 0;
+  const full = rows && rows === pageSize && !tableArea.closest('.table-card').classList.contains('fits-content');
+  if (!full) {
+    tableArea.style.removeProperty('--report-fill-height');
+    return;
+  }
+  const headerHeight = $('.tickets-table thead').getBoundingClientRect().height;
+  tableArea.style.setProperty('--report-fill-height', `${Math.floor((tableArea.clientHeight - headerHeight - 2) / rows)}px`);
+}
+
 function fitRows() {
   if (busy || !report) return;
   // La tarjeta encogida ya muestra todo; medirla achicaría la página sin motivo.
-  if (tableArea.closest('.table-card').classList.contains('fits-content')) return;
+  if (tableArea.closest('.table-card').classList.contains('fits-content')) return stretchRows();
   const size = rowsThatFit();
-  if (size === pageSize) return;
+  if (size === pageSize) return stretchRows();
   // Conserva visible el primer ticket al cambiar el tamaño de la ventana.
   const first = (report.pagina - 1) * report.por_pagina;
   pageSize = size;
@@ -68,7 +80,7 @@ function date(value) {
 function tableMessage(text) {
   const row = element('tr', '');
   const cell = element('td', '', text);
-  cell.colSpan = 8;
+  cell.colSpan = 7;
   row.append(cell);
   $('#report-tickets').replaceChildren(row);
 }
@@ -137,15 +149,14 @@ function render(data) {
       }
       row.append(cell);
     });
-    const action = element('td', 'td-acciones');
-    const button = element('button', 'btn-view-ticket');
-    button.type = 'button';
-    button.title = `Ver detalles ticket ${id(ticket.id_ticket)}`;
-    button.setAttribute('aria-label', button.title);
-    button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
-    button.addEventListener('click', () => showDetail(ticket));
-    action.append(button);
-    row.append(action);
+    // Toda la fila abre el detalle (clic, Enter o espacio).
+    row.classList.add('report-row');
+    row.tabIndex = 0;
+    row.setAttribute('aria-label', `Ver detalle del ticket ${id(ticket.id_ticket)}: ${ticket.nombre_ticket}`);
+    row.addEventListener('click', () => showDetail(ticket));
+    row.addEventListener('keydown', (event) => {
+      if (['Enter', ' '].includes(event.key)) { event.preventDefault(); showDetail(ticket); }
+    });
     body.append(row);
   });
   if (!data.total) tableMessage('No se encontraron tickets con estos filtros.');

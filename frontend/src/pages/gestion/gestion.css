@@ -920,10 +920,43 @@ body.gestion-page .flatpickr-day.endRange {
   grid-template-rows: auto auto minmax(260px, 1fr) auto auto;
 }
 
+/* El detalle tiene su propio scroll; la tabla conserva la mayor parte del alto. */
 .ticket-details {
   max-height: 32dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.ticket-row {
+  cursor: pointer;
+}
+
+.ticket-row:focus-visible {
+  outline: 2px solid var(--ticket-navy);
+  outline-offset: -2px;
+}
+
+/* Los botones de acción quedan fijos abajo mientras el detalle está en pantalla. */
+.ticket-details .detail-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-bottom: 16px;
+  background: #fff;
+}
+
+/* Sin relleno inferior en el panel: así los botones quedan pegados al borde de abajo
+   (el relleno lo ponen los propios botones o el mensaje vacío). */
+.ticket-details {
+  padding-bottom: 0 !important;
+}
+
+.ticket-details .detail-empty {
+  padding-bottom: 20px;
+}
+
+.ticket-details .detail-actions:not(:has(button:not([hidden]))) {
+  display: none;
 }
 
 .new-ticket-button[hidden] {
@@ -1103,7 +1136,6 @@ body.gestion-page .flatpickr-day.endRange {
 
   .ticket-id { grid-area: id; font-weight: 600; }
   .ticket-status { grid-area: status; }
-  .ticket-action { grid-area: action; }
   .ticket-problem { grid-area: problem; }
   .ticket-location { grid-area: location; min-width: 0; white-space: normal; font-weight: 500; }
 
@@ -1179,7 +1211,7 @@ body.gestion-page .flatpickr-day.endRange {
 @media (max-width: 700px) {
   .ticket-row {
     grid-template-areas:
-      "id status action"
+      "id status status"
       "problem problem problem"
       "location location location"
       "assignee assignee assignee";
@@ -1196,7 +1228,7 @@ body.gestion-page .flatpickr-day.endRange {
   .ticket-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      "status status action"
+      "status status status"
       "problem problem problem"
       "location location location"
       "assignee assignee assignee";
@@ -1214,10 +1246,6 @@ body.gestion-page .flatpickr-day.endRange {
     font-size: .85rem;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .ticket-action .view-ticket-button {
-    height: 32px;
   }
 }
 
@@ -1302,3 +1330,4 @@ body.gestion-page .flatpickr-day.endRange {
     display: none;
   }
 }
+
