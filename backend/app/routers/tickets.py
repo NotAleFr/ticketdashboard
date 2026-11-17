@@ -7,15 +7,17 @@ from app.core.deps import get_current_user
 from app.models.aulas import Aula, Equipo
 from app.models.usuarios import Usuario
 from app.models.tickets import EstadoTicket, Ticket, TicketProblema, TipoProblema
+from app.models.tracking import HistorialEstado, Solucion
 from app.schemas.tickets import (
     AsignarTecnicoRequest,
+    EventoHistorial,
     ResolverTicketRequest,
     TicketCreate,
     TicketListRead,
-    TicketRead,
+    TicketDetalleRead, TicketRead,
     TipoProblemaRead,
 )
-from app.services.ticket_service import ticket_service
+from app.services.ticket_service import sincronizar_estado_equipo, ticket_service
 from app.services.report_service import limitar_tickets
 
 def usuario_puede_ver_ticket(ticket: Ticket, usuario: Usuario) -> bool:
@@ -28,48 +30,68 @@ def usuario_puede_ver_ticket(ticket: Ticket, usuario: Usuario) -> bool:
         return ticket.id_usuario == usuario.id_usuario
 
     if usuario.id_rol == 2:
-        # El líder ve los tickets de su laboratorio.
-        if usuario.is_leader:
-            return ticket.id_aula == usuario.laboratorio_asignado_id
-
-        # El técnico ve solo los tickets que tiene asignados.
-        return ticket.id_tecnico == usuario.id_usuario
+        # Todo técnico ve lo que tiene asignado; el líder además ve su laboratorio.
+        if ticket.id_tecnico == usuario.id_usuario:
+            return True
+        return usuario.is_leader and ticket.id_aula == usuario.laboratorio_asignado_id
 
     return False
+
+
+def _nombre_completo(usuario: Usuario | None) -> str | None:
+    if usuario is None:
+        return None
+    return f"{usuario.nombre} {usuario.apellido}".strip()
 
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
 @router.get("/", response_model=list[TicketListRead])
 def listar_tickets(
-    estado: str | None = None,
+    estado: EstadoTicket | None = None,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
     # El JOIN obtiene el perfil asociado al id_usuario del ticket.
     tecnico_alias = aliased(Usuario)
     query = (
-        db.query(Ticket, Usuario, tecnico_alias)
+        db.query(Ticket, Usuario, tecnico_alias, Aula, Equipo)
         .join(Usuario, Ticket.id_usuario == Usuario.id_usuario)
         .outerjoin(tecnico_alias, Ticket.id_tecnico == tecnico_alias.id_usuario)
+        .outerjoin(Aula, Ticket.id_aula == Aula.id_aula)
+        .outerjoin(Equipo, Ticket.id_equipo == Equipo.id_equipo)
     )
-
 
     query = limitar_tickets(query, usuario_actual)
 
     if estado:
-        query = query.filter(Ticket.estado == estado)
+        query = query.filter(Ticket.estado == estado.value)
+
+    filas = query.all()
+
+    # Categorías de todos los tickets listados en una sola consulta.
+    problemas: dict[int, list[str]] = {}
+    ids = [ticket.id_ticket for ticket, *_ in filas]
+    if ids:
+        for id_ticket, nombre in (
+            db.query(TicketProblema.id_ticket, TipoProblema.nombre)
+            .join(TipoProblema, TicketProblema.id_tipo_problema == TipoProblema.id_tipo_problema)
+            .filter(TicketProblema.id_ticket.in_(ids))
+            .order_by(TipoProblema.nombre)
+        ):
+            problemas.setdefault(id_ticket, []).append(nombre)
 
     resultado = []
-    for ticket, reportante, tecnico in query.all():
+    for ticket, reportante, tecnico, aula, equipo in filas:
         datos_ticket = TicketRead.model_validate(ticket).model_dump()
-        datos_ticket["nombre_reportante"] = (
-            f"{reportante.nombre} {reportante.apellido}".strip()
-            )
-        datos_ticket["correo_reportante"] = reportante.email
-        datos_ticket["nombre_tecnico"] = (
-            f"{tecnico.nombre} {tecnico.apellido}".strip()
-            if tecnico else None
+        datos_ticket.update(
+            nombre_reportante=_nombre_completo(reportante),
+            correo_reportante=reportante.email,
+            nombre_tecnico=_nombre_completo(tecnico) if tecnico else None,
+            nombre_aula=aula.nombre if aula else None,
+            equipo_tipo=equipo.tipo if equipo else None,
+            equipo_identificador=equipo.identificador if equipo else None,
+            problemas=problemas.get(ticket.id_ticket, []),
         )
         resultado.append(TicketListRead.model_validate(datos_ticket))
 
@@ -147,7 +169,7 @@ def reabrir_ticket(
     )
 
 
-@router.get("/{id_ticket}", response_model=TicketRead)
+@router.get("/{id_ticket}", response_model=TicketDetalleRead)
 def obtener_ticket(
     id_ticket: int,
     db: Session = Depends(get_db),
@@ -159,7 +181,54 @@ def obtener_ticket(
     if not ticket or not usuario_puede_ver_ticket(ticket, usuario_actual):
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
-    return ticket
+    detalle = TicketDetalleRead.model_validate(ticket)
+    detalle.problemas = [
+        nombre for (nombre,) in db.query(TipoProblema.nombre)
+        .join(TicketProblema, TicketProblema.id_tipo_problema == TipoProblema.id_tipo_problema)
+        .filter(TicketProblema.id_ticket == ticket.id_ticket)
+        .order_by(TipoProblema.nombre)
+    ]
+    return detalle
+
+@router.get("/{id_ticket}/historial", response_model=list[EventoHistorial])
+def obtener_historial(
+    id_ticket: int,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(get_current_user),
+):
+    ticket = db.query(Ticket).filter(Ticket.id_ticket == id_ticket).first()
+    if not ticket or not usuario_puede_ver_ticket(ticket, usuario_actual):
+        raise HTTPException(status_code=404, detail="Ticket no encontrado")
+
+    reportante = db.get(Usuario, ticket.id_usuario)
+    eventos = [EventoHistorial(
+        tipo="creacion", fecha=ticket.fecha_registro, nombre_usuario=_nombre_completo(reportante),
+        estado_actual=EstadoTicket.ABIERTO.value,
+    )]
+    # Cada paso a Resuelto se guarda junto con su solución: la n-ésima solución
+    # corresponde a la n-ésima resolución (ambas en orden de inserción).
+    soluciones = iter(
+        db.query(Solucion.texto)
+        .filter(Solucion.id_ticket == id_ticket)
+        .order_by(Solucion.id_solucion)
+        .all()
+    )
+    for cambio, autor in (
+        db.query(HistorialEstado, Usuario)
+        .outerjoin(Usuario, HistorialEstado.id_usuario == Usuario.id_usuario)
+        .filter(HistorialEstado.id_ticket == id_ticket)
+        .order_by(HistorialEstado.id_historial)
+    ):
+        texto = None
+        if cambio.estado_actual == EstadoTicket.RESUELTO.value:
+            texto = next(soluciones, (None,))[0]
+        eventos.append(EventoHistorial(
+            tipo="estado", fecha=cambio.fecha_cambio, nombre_usuario=_nombre_completo(autor),
+            estado_anterior=cambio.estado_anterior, estado_actual=cambio.estado_actual,
+            texto=texto,
+        ))
+    return eventos
+
 
 @router.post("/", response_model=TicketRead, status_code=201)
 def crear_ticket(
@@ -174,40 +243,63 @@ def crear_ticket(
             detail="Solo un Maestro o Administrador puede crear tickets",
         )
 
-    aula = db.query(Aula).filter(Aula.id_aula == datos.id_aula).first()
+    # Se bloquea el aula: si un administrador la desactiva al mismo tiempo,
+    # una de las dos operaciones espera a la otra y nunca entra un ticket a un aula inactiva.
+    aula = (
+        db.query(Aula)
+        .filter(Aula.id_aula == datos.id_aula)
+        .with_for_update()
+        .first()
+    )
     if not aula:
         raise HTTPException(status_code=404, detail="Aula no encontrada")
+    if not aula.activo:
+        raise HTTPException(status_code=400, detail="El aula está inactiva y no recibe reportes")
 
     if datos.id_equipo is not None:
-        equipo = db.query(Equipo).filter(Equipo.id_equipo == datos.id_equipo).first()
-
+        # Se bloquea el equipo para que un cambio de aula o una baja no se cuele
+        # entre esta validación y el alta del ticket.
+        equipo = (
+            db.query(Equipo)
+            .filter(Equipo.id_equipo == datos.id_equipo)
+            .with_for_update()
+            .first()
+        )
         if not equipo:
             raise HTTPException(status_code=404, detail="Equipo no encontrado")
-
         if equipo.id_aula != datos.id_aula:
             raise HTTPException(
                 status_code=400,
                 detail="El equipo seleccionado no pertenece al aula indicada",
             )
+        if equipo.estado_actual == "Inoperativo":
+            raise HTTPException(status_code=400, detail="El equipo está dado de baja")
 
+    problemas_ids = set(datos.problemas_ids)
+    existentes = {
+        id_tipo for (id_tipo,) in db.query(TipoProblema.id_tipo_problema)
+        .filter(TipoProblema.id_tipo_problema.in_(problemas_ids))
+    }
+    if existentes != problemas_ids:
+        raise HTTPException(status_code=422, detail="Hay tipos de problema que no existen")
 
+    # Ticket y categorías se guardan en una sola transacción.
     nuevo = Ticket(
         nombre_ticket=datos.nombre_ticket,
         descripcion=datos.descripcion,
         id_aula=datos.id_aula,
         id_equipo=datos.id_equipo,
         id_usuario=usuario_actual.id_usuario,  # quien reporta = usuario autenticado
+        estado=EstadoTicket.ABIERTO.value,
     )
     db.add(nuevo)
+    db.flush()
+    db.add_all(
+        TicketProblema(id_ticket=nuevo.id_ticket, id_tipo_problema=id_tipo)
+        for id_tipo in sorted(problemas_ids)
+    )
     db.commit()
     db.refresh(nuevo)
-
-    # Relaciona los tipos de problema seleccionados (tabla TICKETS_PROBLEMAS)
-    for id_tipo_problema in datos.problemas_ids:
-        db.add(TicketProblema(id_ticket=nuevo.id_ticket, id_tipo_problema=id_tipo_problema))
-    db.commit()
-    db.refresh(nuevo)
-
     return nuevo
 
 
@@ -223,10 +315,13 @@ def eliminar_ticket(
             detail="Solo un Administrador puede eliminar tickets",
         )
 
-    ticket = db.query(Ticket).filter(Ticket.id_ticket == id_ticket).first()
+    # Mismo orden de bloqueo que las transiciones (ticket -> equipo) para no interbloquear.
+    ticket = db.query(Ticket).filter(Ticket.id_ticket == id_ticket).with_for_update().first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
+    # Al borrar un ticket en proceso, el equipo puede dejar de estar en mantenimiento.
     db.delete(ticket)
+    sincronizar_estado_equipo(db, ticket.id_equipo)
     db.commit()
 

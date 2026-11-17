@@ -17,6 +17,8 @@ let selectedId = null;
 let editingId = null;
 let mode = 'edit';
 let busy = false;
+let currentUserId = null;
+const mobile = window.matchMedia('(max-width: 1024px)');
 
 const fullName = (user) => `${user.nombre} ${user.apellido}`;
 const role = (user) => user.id_rol === 1 ? ['administrador', 'Administrador']
@@ -24,7 +26,13 @@ const role = (user) => user.id_rol === 1 ? ['administrador', 'Administrador']
     : user.is_leader ? ['lider', 'Líder Lab'] : ['soporte', 'Soporte'];
 const roleKey = (user) => user.id_rol === 1 ? 'administrador' : user.id_rol === 3 ? 'docente' : user.is_leader ? 'lider-lab' : 'tecnico';
 const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const date = (value) => value ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : 'Sin acceso';
+const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Hermosillo' });
+const date = (value) => {
+  if (!value) return 'Sin acceso';
+  const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`;
+  return dateFormat.format(new Date(utc));
+};
+const actions = document.querySelectorAll('.detail-actions-row button');
 const status = (user) => ({ activo: 'Activo', invitado: 'Invitado', suspendido: 'Suspendido' })[user.estado];
 
 function badge(element, kind, label, prefix) {
@@ -43,24 +51,18 @@ function renderDetail(user) {
   badge($('.detail-status-badges .badge-status'), user.estado, status(user), 'badge-status');
   const values = [user.email, user.telefono || '—', labs.find((lab) => lab.id_aula === user.laboratorio_asignado_id)?.nombre || 'Sin asignar', user.is_leader ? 'Sí' : 'No', date(user.ultimo_acceso), date(user.fecha_registro)];
   document.querySelectorAll('.metadata-value').forEach((element, index) => { element.textContent = values[index]; });
-  const activity = $('.activity-list');
-  activity.replaceChildren();
-  for (const [time, description] of [[user.ultimo_acceso, 'Último inicio de sesión'], [user.fecha_registro, 'Alta de usuario']]) {
-    if (!time) continue;
-    const item = document.createElement('div');
-    item.className = 'activity-item';
-    for (const [className, text] of [['activity-marker', ''], ['activity-time', date(time)], ['activity-desc', description]]) {
-      const span = document.createElement('span');
-      span.className = className;
-      span.textContent = text;
-      item.append(span);
-    }
-    activity.append(item);
-  }
   $('.btn-detail-danger').textContent = user.estado === 'suspendido' ? 'Reactivar cuenta' : 'Suspender cuenta';
+  // El backend impide suspenderse a uno mismo; aquí no se ofrece la acción.
+  const self = user.id_usuario === currentUserId;
+  $('.btn-detail-danger').hidden = self;
 }
 
 function render() {
+  // La tabla se reconstruye: se recuerda qué control tenía el foco para devolverlo.
+  const active = document.activeElement;
+  const activeRow = active?.closest?.('#users-body tr[data-id]');
+  const focusId = activeRow?.dataset.id;
+  const focusButton = activeRow ? [...activeRow.querySelectorAll('button')].indexOf(active) : -1;
   const query = normalize(search.value.trim());
   const visible = users.filter((user) => (roleFilter.value === 'todos' || roleFilter.value === roleKey(user))
     && (statusFilter.value === 'todos' || statusFilter.value === user.estado)
@@ -79,7 +81,14 @@ function render() {
     row.querySelector('.td-acceso').textContent = date(user.ultimo_acceso);
     row.querySelector('.td-acceso').classList.toggle('sin-acceso', !user.ultimo_acceso);
     const select = () => { selectedId = user.id_usuario; render(); };
-    row.addEventListener('click', select);
+    row.addEventListener('click', () => {
+      select();
+      // En el celular el detalle queda debajo de la lista.
+      if (mobile.matches) {
+        detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        actions[0].focus({ preventScroll: true });
+      }
+    });
     row.addEventListener('keydown', (event) => {
       if (event.target === row && ['Enter', ' '].includes(event.key)) { event.preventDefault(); select(); }
     });
@@ -87,14 +96,16 @@ function render() {
     buttons[0].title = `Editar usuario ${fullName(user)}`;
     buttons[0].setAttribute('aria-label', buttons[0].title);
     buttons[0].addEventListener('click', (event) => { event.stopPropagation(); select(); openDialog('edit'); });
-    buttons[1].title = `Ver detalle de ${fullName(user)}`;
-    buttons[1].setAttribute('aria-label', buttons[1].title);
     body.append(row);
   }
   if (!visible.length) {
     const cell = body.insertRow().insertCell();
     cell.colSpan = 6;
     cell.textContent = 'No se encontraron usuarios.';
+  }
+  if (focusId) {
+    const row = body.querySelector(`tr[data-id="${focusId}"]`);
+    (focusButton >= 0 ? row?.querySelectorAll('button')[focusButton] : row)?.focus();
   }
   $('.table-footer-text').textContent = `${visible.length} usuarios${visible.length !== users.length ? ` de ${users.length}` : ''}`;
   renderDetail(users.find((user) => user.id_usuario === selectedId));
@@ -113,13 +124,15 @@ function openDialog(action) {
   form.reset();
   message.hidden = true;
   message.textContent = '';
+  hideTemporaryPassword();
   $('#user-fields').hidden = !['create', 'edit'].includes(action);
   $('#cancel-user-dialog').textContent = 'Cancelar';
   submit.hidden = false;
   submit.disabled = false;
   const titles = { create: 'Nuevo usuario', edit: 'Editar usuario', password: 'Restablecer contraseña', status: user?.estado === 'suspendido' ? 'Reactivar cuenta' : 'Suspender cuenta' };
   $('#user-dialog-title').textContent = titles[action];
-  submit.textContent = ['create', 'edit'].includes(action) ? 'Guardar' : 'Confirmar';
+  // El botón dice exactamente qué hace ("Suspender cuenta", "Restablecer contraseña"…).
+  submit.textContent = ['create', 'edit'].includes(action) ? 'Guardar' : titles[action];
   if (user && action !== 'create') {
     for (const key of ['nombre', 'apellido', 'email', 'telefono']) fields[key].value = user[key] || '';
     fields.rol.value = user.is_leader && user.id_rol === 2 ? 'lider' : String(user.id_rol);
@@ -129,6 +142,12 @@ function openDialog(action) {
   for (const input of $('#user-fields').querySelectorAll('input, select')) {
     if (input !== fields.email) input.disabled = !['create', 'edit'].includes(action);
   }
+  const self = action === 'edit' && editingId === currentUserId;
+  fields.rol.disabled = fields.rol.disabled || self;
+  $('#self-hint').hidden = !self;
+  syncLabRequirement();
+  updateTicketsWarning();
+  submit.classList.toggle('btn-danger', action === 'status' && user?.estado !== 'suspendido');
   if (['password', 'status'].includes(action)) {
     message.textContent = `${titles[action]}: ${fullName(user)} (${user.email}).`;
     message.hidden = false;
@@ -161,8 +180,10 @@ form.addEventListener('submit', async (event) => {
     $('#user-fields').hidden = true;
     submit.hidden = true;
     $('#cancel-user-dialog').textContent = 'Cerrar';
-    message.textContent = result?.password_temporal ? `Contraseña temporal (entrégala al usuario):\n${result.password_temporal}` : 'Cambios guardados.';
+    $('#tickets-warning').hidden = true;
+    message.textContent = result?.password_temporal ? 'Contraseña temporal (entrégala al usuario):' : 'Cambios guardados.';
     message.hidden = false;
+    if (result?.password_temporal) showTemporaryPassword(result.password_temporal);
     try { await reload(); } catch { message.textContent += '\nNo se pudo actualizar la lista. Recarga la página.'; }
   } catch (error) {
     message.textContent = error.message;
@@ -174,26 +195,87 @@ form.addEventListener('submit', async (event) => {
   }
 });
 
+// Un líder siempre tiene laboratorio: el navegador lo exige antes de enviar.
+function syncLabRequirement() {
+  const leader = fields.rol.value === 'lider';
+  fields.laboratorio.required = leader && !fields.laboratorio.disabled;
+  $('#lab-hint').hidden = !leader;
+}
+
+// Avisa cuando la acción deja tickets "En Proceso" a nombre de alguien que ya no podrá atenderlos.
+function updateTicketsWarning() {
+  const user = users.find((item) => item.id_usuario === editingId);
+  const count = user?.tickets_en_proceso || 0;
+  const wasTechnician = user?.id_rol === 2;
+  const losesAccess = (mode === 'status' && user?.estado !== 'suspendido')
+    || (mode === 'edit' && wasTechnician && !['2', 'lider'].includes(fields.rol.value));
+  const warning = $('#tickets-warning');
+  warning.hidden = !(count && losesAccess);
+  warning.textContent = warning.hidden ? '' : count === 1
+    ? `${fullName(user)} tiene 1 ticket en proceso. Seguirá asignado a su nombre hasta que un líder lo reasigne.`
+    : `${fullName(user)} tiene ${count} tickets en proceso. Seguirán asignados a su nombre hasta que un líder los reasigne.`;
+}
+
+// La contraseña temporal solo vive en el diálogo mientras está abierto.
+function showTemporaryPassword(password) {
+  $('#temp-password-value').textContent = password;
+  $('#temp-password').hidden = false;
+  $('#copy-password').textContent = 'Copiar';
+  $('#copy-password').focus();
+}
+
+function hideTemporaryPassword() {
+  $('#temp-password-value').textContent = '';
+  $('#temp-password').hidden = true;
+  $('#copy-status').textContent = '';
+}
+
+$('#copy-password').addEventListener('click', async () => {
+  const value = $('#temp-password-value');
+  try {
+    await navigator.clipboard.writeText(value.textContent);
+    $('#copy-password').textContent = 'Copiada';
+    $('#copy-status').textContent = 'Contraseña copiada al portapapeles.';
+  } catch {
+    // Sin permiso de portapapeles: se deja seleccionada para copiarla a mano.
+    getSelection().selectAllChildren(value);
+    $('#copy-status').textContent = 'No se pudo copiar automáticamente. Ya está seleccionada: cópiala con Ctrl+C.';
+  }
+});
+
+fields.rol.addEventListener('change', () => { syncLabRequirement(); updateTicketsWarning(); });
 $('#cancel-user-dialog').addEventListener('click', () => { if (!busy) dialog.close(); });
 dialog.addEventListener('cancel', (event) => { if (busy) event.preventDefault(); });
-dialog.addEventListener('close', () => { message.textContent = ''; });
+dialog.addEventListener('close', () => {
+  message.textContent = '';
+  hideTemporaryPassword();
+  // Si la lista se recargó con el diálogo abierto, el botón que lo abrió ya no existe.
+  if (!document.activeElement || document.activeElement === document.body) {
+    body.querySelector(`tr[data-id="${selectedId}"]`)?.focus();
+  }
+});
 $('.btn-add-user').addEventListener('click', () => openDialog('create'));
-const actions = document.querySelectorAll('.detail-actions-row button');
 actions[0].addEventListener('click', () => openDialog('edit'));
 actions[1].addEventListener('click', () => openDialog('password'));
-actions[2].addEventListener('click', () => { openDialog('edit'); fields.rol.focus(); });
-actions[3].addEventListener('click', () => openDialog('status'));
+actions[2].addEventListener('click', () => openDialog('status'));
 roleFilter.addEventListener('change', render);
 statusFilter.addEventListener('change', render);
 search.addEventListener('input', render);
 
 try {
   const currentUser = await apiJson('/usuarios/me');
-  if (currentUser.id_rol !== 1) throw new Error('Solo el administrador puede administrar usuarios.');
-  labs = await apiJson('/aulas');
-  for (const lab of labs) fields.laboratorio.add(new Option(`${lab.nombre}${lab.activo ? '' : ' (inactivo)'}`, lab.id_aula));
-  await reload();
-  $('.btn-add-user').disabled = false;
+  if (currentUser.id_rol !== 1) {
+    // Sin permiso no se muestra el panel: solo el aviso y el camino de vuelta.
+    for (const section of document.querySelectorAll('.filters-search-bar, .user-table-card, .user-detail-card, .btn-add-user')) section.hidden = true;
+    $('.not-allowed-card').hidden = false;
+    $('.btn-volver').href = '../../../dashboard.html';
+  } else {
+    currentUserId = currentUser.id_usuario;
+    labs = await apiJson('/aulas');
+    for (const lab of labs) fields.laboratorio.add(new Option(`${lab.nombre}${lab.activo ? '' : ' (inactivo)'}`, lab.id_aula));
+    await reload();
+    $('.btn-add-user').disabled = false;
+  }
 } catch (error) {
   body.replaceChildren();
   const cell = body.insertRow().insertCell();

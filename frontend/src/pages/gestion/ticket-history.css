@@ -1,0 +1,58 @@
+/* Línea de tiempo del historial de un ticket (gestión y reportes). */
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  position: relative;
+  padding: 0 0 14px 22px;
+}
+
+.history-item::before {
+  position: absolute;
+  top: 6px;
+  left: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #263d8c;
+  content: "";
+}
+
+.history-item:not(:last-child)::after {
+  position: absolute;
+  top: 18px;
+  bottom: 0;
+  left: 8px;
+  width: 1px;
+  background: #d5dcf0;
+  content: "";
+}
+
+.history-item p {
+  margin: 0;
+}
+
+.history-item__what {
+  color: #172033;
+  font-weight: 500;
+}
+
+.history-item__meta {
+  margin-top: 2px !important;
+  color: #5b6577;
+  font-size: .85rem;
+}
+
+.history-item__note {
+  margin-top: 6px !important;
+  padding: 8px 12px;
+  border: 1px solid #b7e4c7;
+  border-radius: 8px;
+  background: #f0fbf4;
+  color: #344054;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}

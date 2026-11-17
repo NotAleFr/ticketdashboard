@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from typing import Annotated, List, Literal, Optional
 from datetime import datetime
 from uuid import UUID
 from app.models.tickets import EstadoTicket
@@ -11,7 +11,9 @@ class TicketBase(BaseModel):
     id_equipo: Optional[int] = None
 
 class TicketCreate(TicketBase):
-    problemas_ids: List[int] = Field(min_length=1)
+    nombre_ticket: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+    descripcion: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+    problemas_ids: List[int] = Field(min_length=1, max_length=20)
 
 class TicketUpdate(BaseModel):
     """Todos los campos opcionales: solo se actualiza lo que se envíe."""
@@ -32,10 +34,28 @@ class TicketRead(TicketBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class TicketDetalleRead(TicketRead):
+    problemas: List[str] = []
+
+
 class TicketListRead(TicketRead):
     nombre_reportante: str
     correo_reportante: str
     nombre_tecnico: Optional[str] = None
+    nombre_aula: Optional[str] = None
+    equipo_tipo: Optional[str] = None
+    equipo_identificador: Optional[str] = None
+    problemas: List[str] = []
+
+
+class EventoHistorial(BaseModel):
+    """Entrada de la línea de tiempo: creación o cambio de estado (con su solución si aplica)."""
+    tipo: Literal["creacion", "estado"]
+    fecha: Optional[datetime] = None
+    nombre_usuario: Optional[str] = None
+    estado_anterior: Optional[str] = None
+    estado_actual: Optional[str] = None
+    texto: Optional[str] = None
 
 
 class TipoProblemaRead(BaseModel):
@@ -49,5 +69,5 @@ class AsignarTecnicoRequest(BaseModel):
     id_tecnico: UUID
 
 class ResolverTicketRequest(BaseModel):
-    texto_solucion: str = Field(min_length=1)
+    texto_solucion: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
 

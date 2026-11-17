@@ -939,15 +939,16 @@ body {
 .pagination-controls { flex-wrap: wrap; }
 button:disabled, select:disabled { opacity: 0.5; cursor: default; }
 .reportes-header { flex-wrap: wrap; }
-#report-users-link { margin-left: auto; }
 .table-responsive { min-height: 0; overflow-y: auto; flex: 1; }
 .table-card { min-height: 140px; }
 .table-pagination { flex-shrink: 0; min-height: 45px; }
 .tickets-table { --report-row-height: 45px; table-layout: fixed; min-width: 960px; }
-.tickets-table tbody tr { height: var(--report-row-height); }
+.tickets-table tbody tr { height: var(--report-fill-height, var(--report-row-height)); }
+.report-row { cursor: pointer; }
+.report-row:hover { background-color: #f6f9ff; }
+.report-row:focus-visible { outline: 2px solid var(--secundario); outline-offset: -2px; }
 .tickets-table td { line-height: 14px; }
 .tickets-table th.th-id { width: 64px; }
-.tickets-table th.th-acciones { width: 90px; }
 .td-id .report-cell-text { display: block; white-space: nowrap; overflow-wrap: normal; }
 .chart-card { min-width: 0; }
 .report-cell-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-height: 28px; overflow-wrap: anywhere; }
@@ -978,3 +979,222 @@ button:disabled, select:disabled { opacity: 0.5; cursor: default; }
   .table-card { height: calc(100dvh - 32px); flex: none; }
   .table-pagination { min-height: 72px; }
 }
+
+/* ===== Auditoría ===== */
+/* La tendencia es informativa: más tickets no es "bueno", así que no va en verde. */
+.kpi-trend { color: var(--text-muted); }
+.kpi-trend svg { stroke: currentColor; }
+
+.pagination-btn.active {
+  background-color: var(--secundario);
+  border-color: var(--secundario);
+}
+
+.pagination-btn:focus-visible,
+.btn-view-ticket:focus-visible,
+.btn-filter-apply:focus-visible,
+.btn-filter-clear:focus-visible,
+.filter-select:focus-visible {
+  outline: 2px solid var(--secundario);
+  outline-offset: 2px;
+}
+
+/* Celular: cada ticket es una tarjeta en vez de una fila de 8 columnas que se corta. */
+@media (max-width: 700px) {
+  .tickets-table {
+    --report-row-height: 112px;
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  .tickets-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tickets-table,
+  .tickets-table tbody {
+    display: block;
+  }
+
+  .tickets-table tbody tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "titulo titulo titulo"
+      "estado fecha fecha"
+      "aula aula equipo"
+      "resp resp resp";
+    align-content: center;
+    gap: 4px 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .tickets-table tbody tr:has(td[colspan]) {
+    display: block;
+    height: auto;
+  }
+
+  .tickets-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .tickets-table .report-cell-text {
+    display: block;
+    max-height: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .td-id { display: none !important; }
+  .td-titulo { grid-area: titulo; font-weight: 600; font-size: 14px; }
+  .td-estado { grid-area: estado; }
+  .td-fecha { grid-area: fecha; align-self: center; color: var(--text-muted); font-size: 12px; }
+  .td-aula { grid-area: aula; font-size: 13px; }
+  .td-equipo { grid-area: equipo; color: var(--text-muted); font-size: 12px; text-align: right; }
+  .td-responsable { grid-area: resp; color: var(--text-muted); font-size: 12px; }
+
+  .td-responsable .report-cell-text::before {
+    content: "Responsable: ";
+  }
+}
+
+/* Insignias de estado con texto legible (mismo tono, más oscuro). */
+.badge-pendiente { color: #B91C1C; }
+.badge-en-proceso { background-color: #FEF3C7; color: #92400E; }
+.badge-resuelto { color: #047857; }
+
+/* Filtros: se aplican solos; en el celular se agrupan en dos botones. */
+.filters-toggle,
+#apply-filters[hidden] {
+  display: none;
+}
+
+.detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-chip {
+  padding: 2px 10px;
+  border: 1px solid #c9d3f0;
+  border-radius: 999px;
+  background: #eef2fc;
+  color: var(--secundario);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.detail-history[hidden] {
+  display: none;
+}
+
+.detail-history {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+
+.detail-history h3 {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+#ticket-detail-fields { margin: 14px 0 0; }
+
+@media (max-width: 700px) {
+  .filters-card {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .filters-actions {
+    order: -1;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .filters-toggle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 38px;
+    flex: none;
+    padding: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--secundario);
+    cursor: pointer;
+  }
+
+  .filters-toggle[aria-expanded="true"] {
+    border-color: #9cb7ed;
+    background: #e8edf9;
+  }
+
+  .filters-toggle:focus-visible {
+    outline: 2px solid var(--secundario);
+    outline-offset: 2px;
+  }
+
+  .filters-toggle__dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--primario);
+  }
+
+  .filters-toggle__dot[hidden] {
+    display: none;
+  }
+
+  #clear-filters {
+    margin-left: auto;
+  }
+
+  .filters-card:not(.show-main) .filter-group--main,
+  .filters-card:not(.show-period) .filter-group--period {
+    display: none;
+  }
+
+  .filters-card:not(.show-main):not(.show-period) .filters-dropdowns {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .filters-actions .btn-filter-clear {
+    flex: none;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1100px) {
+  .table-card.fits-content { height: auto; }
+}
+
+/* El encabezado del detalle (con "Cerrar") queda fijo si el contenido se desplaza. */
+#ticket-detail .detail-header { position: sticky; top: -22px; z-index: 1; margin: -22px -22px 0; padding: 22px 22px 10px; background: #fff; }

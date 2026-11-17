@@ -12,7 +12,71 @@
 #user-dialog h2 { margin-top: 0; color: var(--secundario); }
 #user-fields { display: grid; gap: 12px; }
 #user-fields label { display: grid; gap: 5px; font-size: 13px; }
-#user-fields input, #user-fields select { padding: 9px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; font: inherit; width: 100%; }
+#user-fields input, #user-fields select { padding: 9px 12px; border: 1px solid #98a2b3; border-radius: 8px; background: #fff; color: var(--text-primary); font: inherit; width: 100%; }
+#user-fields input:focus-visible, #user-fields select:focus-visible { outline: 2px solid var(--secundario); outline-offset: 1px; border-color: var(--secundario); }
+#user-fields input:disabled, #user-fields select:disabled { background: var(--bg-slate-light); border-color: var(--border-subtle); color: var(--text-secondary); cursor: not-allowed; opacity: 1; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 #user-dialog-message { overflow-wrap: anywhere; white-space: pre-wrap; }
 button:disabled { opacity: .55; cursor: wait; }
+
+/* ===== Auditoría ===== */
+.field-hint { margin: -4px 0 0; color: var(--text-secondary); font-size: 12px; }
+.btn-detail-action.btn-primary { border-color: var(--secundario); background: var(--secundario); color: #fff; }
+.btn-detail-action.btn-primary:hover { background: #1b2c6e; border-color: #1b2c6e; }
+.btn-detail-action.btn-primary.btn-danger { border-color: #B42318; background: #B42318; }
+.btn-detail-action.btn-primary.btn-danger:hover { background: #912018; border-color: #912018; }
+.btn-detail-action:focus-visible, .btn-icon-action:focus-visible, .btn-add-user:focus-visible, .btn-volver:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.user-detail-card .btn-detail-action:focus-visible, #user-dialog .btn-detail-action:focus-visible, .btn-icon-action:focus-visible { outline-color: var(--secundario); }
+.btn-icon-action { width: 32px; height: 32px; border-radius: 8px; }
+.not-allowed-card { display: grid; justify-items: start; gap: 14px; padding: 24px; border-radius: 20px; background: #fff; }
+.not-allowed-card p { margin: 0; }
+.not-allowed-card .btn-detail-action { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Escritorio: todo en una pantalla; la lista de usuarios hace scroll por dentro.
+   Con poca altura (ventana baja o zoom) la página vuelve a desplazarse entera. */
+@media (min-width: 1025px) and (min-height: 640px) {
+  .usuarios-container { height: calc(100vh - 32px); overflow: hidden; }
+  .user-table-card { display: flex; flex: 1 1 auto; min-height: 160px; flex-direction: column; flex-shrink: 1; }
+  .user-table-card .table-responsive { flex: 1; min-height: 0; overflow-y: auto; }
+  .user-table thead th { position: sticky; top: 0; z-index: 1; background: var(--bg-slate-light); }
+  .user-detail-card { flex-shrink: 0; }
+}
+
+/* Celular: cada usuario es una tarjeta (sin columnas cortadas). */
+@media (max-width: 1024px) {
+  .header-title { font-size: 1.5rem; }
+  .user-table thead { display: none; }
+  .user-table, .user-table tbody { display: block; }
+  #users-body tr[data-id] {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "usuario usuario usuario acciones" "correo correo correo acciones" "rol estado . acciones";
+    gap: 2px 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-light);
+  }
+  #users-body tr[data-id] { height: auto; }
+  #users-body tr[data-id] td { display: block; padding: 0; border: 0; white-space: normal; }
+  #users-body tr:not([data-id]) td { display: block; white-space: normal; }
+  .not-allowed-card .btn-detail-action { justify-content: center; }
+  #users-body .td-usuario { grid-area: usuario; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+  #users-body .td-correo { grid-area: correo; min-width: 0; overflow-wrap: anywhere; color: var(--text-secondary); font-size: 13px; }
+  #users-body tr[data-id] td:nth-child(3) { grid-area: rol; margin-top: 6px; }
+  #users-body tr[data-id] td:nth-child(4) { grid-area: estado; margin-top: 6px; }
+  #users-body .td-acceso { display: none !important; }
+  #users-body .td-acciones { grid-area: acciones; align-self: center; }
+  .identity-code { display: none; }
+  .metadata-item { display: grid; gap: 2px; }
+}
+
+@media (min-width: 1025px) and (max-height: 639px) {
+  html, body { height: auto; min-height: 100%; overflow-y: auto; }
+  .usuarios-wrapper { height: auto; min-height: 100vh; overflow: visible; }
+  .usuarios-container { max-height: none; overflow: visible; }
+}
+
+.dialog-warning { margin: 14px 0 0; padding: 10px 12px; border: 1px solid #F5C26B; border-radius: 8px; background: #FFF8E6; color: #7A4B00; font-size: 13px; line-height: 1.45; }
+.temp-password { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.temp-password code { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-slate-light); font: 600 14px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+.copy-status { margin: 6px 0 0; min-height: 1em; color: var(--text-secondary); font-size: 12px; }
+.copy-status:empty { display: none; }

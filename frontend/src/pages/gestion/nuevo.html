@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Reporta una falla de un laboratorio de cómputo.">
     <title>Nuevo ticket</title>
-    <link rel="icon" type="image/x-icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+    <link rel="icon" type="image/png" href="/imgs/logo-buho-96.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -37,8 +37,10 @@
                 type="text"
                 maxlength="100"
                 placeholder="Ej. PC no enciende - 5J-CO203"
+                aria-describedby="ticket-title-error"
                 required
               >
+              <p id="ticket-title-error" class="field-error" hidden></p>
             </div>
           </div>
 
@@ -46,10 +48,11 @@
             <span class="form-label">Ubicación</span>
             <div class="location-controls">
               <label class="form-field" for="classroom-select">
-                <select id="classroom-select" name="id_aula" required>
+                <select id="classroom-select" name="id_aula" aria-describedby="classroom-select-error" required>
                   <option value="">Cargando aulas...</option>
                 </select>
                 <span class="field-hint">Aula / laboratorio</span>
+                <span id="classroom-select-error" class="field-error" hidden></span>
               </label>
 
               <label class="form-field" for="equipment-select">
@@ -66,6 +69,7 @@
             <div id="problem-types-list" class="problem-types-list" aria-live="polite">
               <span class="field-hint">Cargando tipos de problema...</span>
             </div>
+            <p id="problem-types-error" class="field-error problem-error" hidden></p>
           </fieldset>
 
           <div class="form-row description-row">
@@ -76,12 +80,16 @@
                 name="descripcion"
                 rows="5"
                 placeholder="Describe qué ocurre con el equipo"
+                maxlength="2000"
+                aria-describedby="ticket-description-error"
                 required
               ></textarea>
+              <p id="ticket-description-error" class="field-error" hidden></p>
             </div>
           </div>
 
           <p id="form-message" class="form-message" role="status" aria-live="polite" hidden></p>
+          <button id="retry-options" class="retry-button" type="button" hidden>Reintentar</button>
 
           <footer class="form-actions">
             <a class="cancel-button" href="./gestion.html">Cancelar</a>

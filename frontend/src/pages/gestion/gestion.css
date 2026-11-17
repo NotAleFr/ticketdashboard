@@ -3,7 +3,7 @@
   --ticket-navy: #263d8c;
   --ticket-gold: #f0ad32;
   --ticket-ink: #182235;
-  --ticket-muted: #8b96a9;
+  --ticket-muted: #5b6577;
   --ticket-line: #e9edf3;
   --ticket-selected: #eef5ff;
   --ticket-page: #f7f8fa;
@@ -40,7 +40,8 @@ body.gestion-page {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -165,7 +166,7 @@ select {
 }
 
 .search-control::placeholder {
-  color: #9299a6;
+  color: var(--ticket-muted);
 }
 
 .date-range-filter {
@@ -297,7 +298,7 @@ body.gestion-page .flatpickr-day.endRange {
 }
 
 .ticket-id {
-  color: #7c879a !important;
+  color: var(--ticket-muted) !important;
   white-space: nowrap;
 }
 
@@ -327,7 +328,7 @@ body.gestion-page .flatpickr-day.endRange {
   overflow: hidden;
   max-width: 270px;
   margin-top: 3px;
-  color: #8993a4;
+  color: var(--ticket-muted);
   font-size: .78rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -379,7 +380,7 @@ body.gestion-page .flatpickr-day.endRange {
 
 .status-badge--unknown,
 .assignee-muted {
-  color: #a2aaba;
+  color: var(--ticket-muted);
 }
 
 .view-ticket-button {
@@ -390,7 +391,7 @@ body.gestion-page .flatpickr-day.endRange {
   border: 0;
   border-radius: 10px;
   background: transparent;
-  color: #98a3b6;
+  color: var(--ticket-muted);
   cursor: pointer;
   transition: background-color .15s ease, color .15s ease;
 }
@@ -431,7 +432,7 @@ body.gestion-page .flatpickr-day.endRange {
   padding: 7px 22px;
   border-top: 1px solid #eef0f4;
   background: #f8f9fb;
-  color: #8b96a9;
+  color: var(--ticket-muted);
   font-size: .9rem;
 }
 
@@ -478,7 +479,7 @@ body.gestion-page .flatpickr-day.endRange {
 }
 
 .details-id {
-  color: #98a2b3;
+  color: var(--ticket-muted);
   font-size: .95rem;
   white-space: nowrap;
 }
@@ -486,7 +487,7 @@ body.gestion-page .flatpickr-day.endRange {
 .detail-empty {
   margin: 0;
   padding: 14px 0;
-  color: #7b8798;
+  color: var(--ticket-muted);
 }
 
 .details-grid {
@@ -505,7 +506,7 @@ body.gestion-page .flatpickr-day.endRange {
 }
 
 .detail-item dt {
-  color: #98a2b3;
+  color: var(--ticket-muted);
 }
 
 .detail-item dd {
@@ -523,7 +524,7 @@ body.gestion-page .flatpickr-day.endRange {
 .detail-description h3,
 .history-section h3 {
   margin: 0 0 9px;
-  color: #8994a6;
+  color: var(--ticket-muted);
   font-size: .9rem;
   font-weight: 600;
   letter-spacing: .035em;
@@ -538,7 +539,7 @@ body.gestion-page .flatpickr-day.endRange {
 }
 
 .history-empty {
-  color: #8b96a9;
+  color: var(--ticket-muted);
   font-size: .9rem;
 }
 
@@ -912,3 +913,421 @@ body.gestion-page .flatpickr-day.endRange {
     padding: 14px;
   }
 }
+
+/* ===== Auditoría: todo cabe en una pantalla; la tabla y el detalle tienen su propio scroll.
+   La tabla se queda con la mayor parte del alto; el detalle scrollea por dentro. ===== */
+.ticket-shell {
+  grid-template-rows: auto auto minmax(260px, 1fr) auto auto;
+}
+
+/* El detalle tiene su propio scroll; la tabla conserva la mayor parte del alto. */
+.ticket-details {
+  max-height: 32dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ticket-row {
+  cursor: pointer;
+}
+
+.ticket-row:focus-visible {
+  outline: 2px solid var(--ticket-navy);
+  outline-offset: -2px;
+}
+
+/* Los botones de acción quedan fijos abajo mientras el detalle está en pantalla. */
+.ticket-details .detail-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-bottom: 16px;
+  background: #fff;
+}
+
+/* Sin relleno inferior en el panel: así los botones quedan pegados al borde de abajo
+   (el relleno lo ponen los propios botones o el mensaje vacío). */
+.ticket-details {
+  padding-bottom: 0 !important;
+}
+
+.ticket-details .detail-empty {
+  padding-bottom: 20px;
+}
+
+.ticket-details .detail-actions:not(:has(button:not([hidden]))) {
+  display: none;
+}
+
+.new-ticket-button[hidden] {
+  display: none;
+}
+
+.view-ticket-button:focus-visible {
+  outline: 3px solid var(--ticket-navy);
+  outline-offset: 1px;
+}
+
+.ticket-dialog__fields select,
+.ticket-dialog__fields textarea {
+  border-color: #7b8497;
+}
+
+.ticket-dialog__fields select:focus,
+.ticket-dialog__fields textarea:focus {
+  border-color: var(--ticket-navy);
+}
+
+.detail-item--wide {
+  grid-column: 1 / -1;
+}
+
+.category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.category-chip {
+  padding: 3px 10px;
+  border: 1px solid #d5dcf0;
+  border-radius: 999px;
+  background: #f2f5fc;
+  color: var(--ticket-navy);
+  font-size: .85rem;
+  font-weight: 500;
+}
+
+.history-empty[hidden] {
+  display: none;
+}
+
+/* Nombres reales de aula/equipo: se recortan para que quepan las 7 columnas. */
+.ticket-location {
+  min-width: 0;
+  max-width: 230px;
+}
+
+.ticket-location span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-reporter {
+  min-width: 0;
+}
+
+/* En móvil cada ticket es una tarjeta en lugar de una fila de 7 columnas. */
+@media (max-width: 700px) {
+  /* En el celular todo cabe en una pantalla: la lista toma el espacio libre
+     con su propio scroll y el detalle va resumido hasta pulsar "Ver más". */
+  .ticket-shell {
+    grid-template-rows: auto auto minmax(150px, 1fr) auto auto;
+  }
+
+  .ticket-table-card .table-scroll {
+    overscroll-behavior: contain;
+  }
+
+  .ticket-details {
+    margin-top: 12px;
+    padding: 16px 18px;
+    max-height: 60dvh;
+  }
+
+  .ticket-details .details-header {
+    margin-bottom: 8px;
+  }
+
+  .ticket-details .details-header h2 {
+    font-size: 1.05rem;
+  }
+
+  .ticket-details:not(.is-expanded) .detail-item:not(.detail-item--key),
+  .ticket-details:not(.is-expanded) .detail-description,
+  .ticket-details:not(.is-expanded) .history-section {
+    display: none;
+  }
+
+  .ticket-details:not(.is-expanded) .details-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+  }
+
+  .ticket-details:not(.is-expanded) .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .detail-more {
+    display: block;
+    margin: 6px 0 0;
+    padding: 6px 0;
+    border: 0;
+    background: none;
+    color: var(--ticket-navy);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .detail-more:focus-visible {
+    outline: 2px solid var(--ticket-navy);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .ticket-details .detail-actions {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .ticket-table {
+    min-width: 0;
+  }
+
+  .ticket-table thead {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+  }
+
+  .ticket-table,
+  .ticket-table tbody {
+    display: block;
+  }
+
+  .ticket-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "id status action"
+      "problem problem problem"
+      "location location location"
+      "reporter reporter reporter"
+      "assignee assignee assignee";
+    align-items: center;
+    gap: 6px 10px;
+    padding: 14px 12px 14px 16px;
+    border-top: 1px solid #edf0f4;
+  }
+
+  .ticket-row:first-child {
+    border-top: 0;
+  }
+
+  .ticket-row.is-selected {
+    background: var(--ticket-selected);
+    box-shadow: inset 4px 0 0 var(--ticket-navy);
+  }
+
+  .ticket-table td {
+    display: block;
+    height: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .ticket-id { grid-area: id; font-weight: 600; }
+  .ticket-status { grid-area: status; }
+  .ticket-problem { grid-area: problem; }
+  .ticket-location { grid-area: location; min-width: 0; white-space: normal; font-weight: 500; }
+
+  .ticket-location span {
+    display: inline;
+  }
+
+  .ticket-location span + span::before {
+    content: " · ";
+  }
+
+  .ticket-problem__title,
+  .ticket-problem__description {
+    max-width: none;
+  }
+
+  .ticket-problem__title {
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: normal;
+  }
+
+  .ticket-reporter,
+  .ticket-assignee {
+    display: inline !important;
+    min-width: 0;
+    color: var(--ticket-muted) !important;
+    font-size: .85rem;
+    font-weight: 400;
+  }
+
+  .ticket-reporter {
+    grid-area: reporter;
+  }
+
+  .ticket-reporter::before {
+    content: "Reportó: ";
+  }
+
+  .ticket-assignee {
+    grid-area: assignee;
+  }
+
+  .ticket-assignee::before {
+    content: "Responsable: ";
+  }
+
+  .status-badge {
+    min-height: 26px;
+    font-size: .82rem;
+  }
+}
+
+/* Escritorio: las 7 columnas caben sin desplazamiento horizontal. */
+@media (min-width: 701px) {
+  .ticket-table th,
+  .ticket-table td {
+    padding-inline: 14px;
+  }
+
+  .ticket-problem__title,
+  .ticket-problem__description {
+    max-width: 220px;
+  }
+
+  .ticket-location {
+    max-width: 200px;
+  }
+}
+
+/* Móvil: tarjetas compactas para que entren varias en la lista.
+   La descripción y quién reportó se ven en el detalle. */
+@media (max-width: 700px) {
+  .ticket-row {
+    grid-template-areas:
+      "id status status"
+      "problem problem problem"
+      "location location location"
+      "assignee assignee assignee";
+    gap: 2px 10px;
+    padding: 10px 10px 10px 14px;
+  }
+
+  .ticket-id,
+  .ticket-problem__description,
+  .ticket-reporter {
+    display: none !important;
+  }
+
+  .ticket-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "status status status"
+      "problem problem problem"
+      "location location location"
+      "assignee assignee assignee";
+  }
+
+  .ticket-problem__title {
+    overflow: hidden;
+    font-size: .95rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ticket-location {
+    overflow: hidden;
+    font-size: .85rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* El botón "Ver más" solo existe en el celular. */
+@media (min-width: 701px) {
+  .detail-more {
+    display: none;
+  }
+}
+
+/* Botones de filtros: solo en el celular. */
+.filters-toggle {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .search-control {
+    grid-column: auto;
+    order: -3;
+  }
+
+  #date-toggle { order: -2; }
+  #filters-toggle { order: -1; }
+
+  .filters-toggle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    align-self: stretch;
+    padding: 0;
+    border: 1px solid #e5e9f0;
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ticket-navy);
+    cursor: pointer;
+  }
+
+  .filters-toggle[aria-expanded="true"] {
+    background: #e8edf9;
+    border-color: #9cb7ed;
+  }
+
+  .filters-toggle:focus-visible {
+    outline: 2px solid var(--ticket-gold);
+    outline-offset: 2px;
+  }
+
+  .filters-toggle__dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 9px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: var(--ticket-gold);
+  }
+
+  .filters-toggle__dot[hidden] {
+    display: none;
+  }
+
+  #status-filter,
+  #classroom-filter,
+  .date-range-filter {
+    grid-column: 1 / -1;
+  }
+
+  .filters:not(.show-filters) #status-filter,
+  .filters:not(.show-filters) #classroom-filter,
+  .filters:not(.show-dates) .date-range-filter {
+    display: none;
+  }
+
+  /* El número ya no se muestra en el detalle del celular para ganar espacio. */
+  .details-id {
+    display: none;
+  }
+}
+

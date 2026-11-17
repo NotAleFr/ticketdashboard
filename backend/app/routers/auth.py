@@ -12,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_user, token_bearer
+from app.core.deps import get_authenticated_user, token_bearer
 from app.db.database import get_db
 from app.models.usuarios import Usuario
 
@@ -79,13 +79,19 @@ def request_password_recovery(data: RecoveryRequest):
 def update_password(
     data: PasswordUpdate,
     credentials: HTTPAuthorizationCredentials = Depends(token_bearer),
-    user: Usuario = Depends(get_current_user),
+    user: Usuario = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     password = data.password.get_secret_value()
     # Validate here so validation responses never echo the submitted password.
     if not 8 <= len(password) <= 128:
         raise HTTPException(422, "La contraseña debe tener entre 8 y 128 caracteres.")
+    # Se serializa con el restablecimiento del administrador (misma fila bloqueada).
+    user_id = user.id_usuario  # tras un rollback el objeto queda expirado
+    user = (
+        db.query(Usuario).filter(Usuario.id_usuario == user_id)
+        .with_for_update().populate_existing().one()
+    )
     supabase_auth_request(
         "PUT", "/user", {"password": password}, token=credentials.credentials,
     )
@@ -94,7 +100,7 @@ def update_password(
         db.commit()
     except SQLAlchemyError:
         db.rollback()
-        logger.exception("No se pudo sincronizar el perfil %s", user.id_usuario)
+        logger.exception("No se pudo sincronizar el perfil %s", user_id)
         raise HTTPException(
             503,
             "Tu contraseña ya cambió, pero no se pudo actualizar el estado de tu perfil. "

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Panel del sistema de gestión de tickets de laboratorio.">
     <title>Panel de tickets</title>
-    <link rel="icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+    <link rel="icon" type="image/png" href="/imgs/logo-buho-96.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,7 +38,7 @@
 
     <main class="dashboard-shell">
       <section class="dashboard-content">
-        <nav class="dashboard-grid" aria-label="Secciones del sistema">
+        <nav id="dashboard-grid" class="dashboard-grid" aria-label="Secciones del sistema" hidden>
           <a
             id="tickets-card"
             class="dashboard-card dashboard-card--tickets"
@@ -70,7 +70,10 @@
           </a>
         </nav>
 
-        <p id="dashboard-message" class="dashboard-message" role="alert" hidden></p>
+        <div id="dashboard-error" class="dashboard-error" hidden>
+          <p id="dashboard-message" class="dashboard-message" role="alert"></p>
+          <button id="dashboard-retry" class="account-button account-button--secondary" type="button">Reintentar</button>
+        </div>
       </section>
     </main>
 
@@ -90,6 +93,7 @@
         <p id="password-error" class="account-error" role="alert" hidden></p>
         <div class="account-dialog__actions">
           <button class="account-button account-button--secondary" type="button" data-close-account-dialog>Cancelar</button>
+          <button id="forced-logout-button" class="account-button account-button--secondary" type="button" hidden>Cerrar sesión</button>
           <button id="save-password-button" class="account-button account-button--primary" type="submit">Guardar contraseña</button>
         </div>
       </form>

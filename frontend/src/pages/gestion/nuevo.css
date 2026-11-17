@@ -3,7 +3,18 @@ body.gestion-page.new-ticket-page {
   padding-bottom: 28px;
 }
 
+/* El formulario no usa la rejilla de gestión (lista + detalle): crece con su
+   contenido y la página hace scroll normal, así nunca se recorta. */
+body.gestion-page.new-ticket-page {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .new-ticket-shell {
+  grid-template-rows: auto auto;
+  align-content: start;
+  height: auto;
   width: min(84vw, 1220px);
   padding: 30px clamp(24px, 4vw, 64px) 38px;
 }
@@ -77,7 +88,7 @@ body.gestion-page.new-ticket-page {
   min-height: 44px;
   margin: 0;
   padding: 10px 15px;
-  border: 1px solid #cdd3dd;
+  border: 1px solid #7b8497;
   border-radius: 9px;
   outline: none;
   background: #fff;
@@ -90,13 +101,13 @@ body.gestion-page.new-ticket-page {
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
-  border-color: #8ca8e6;
-  box-shadow: 0 0 0 3px rgba(140, 168, 230, .2);
+  border-color: var(--ticket-navy);
+  box-shadow: 0 0 0 3px rgba(38, 61, 140, .18);
 }
 
 .form-field input::placeholder,
 .form-field textarea::placeholder {
-  color: #a0a6b1;
+  color: #6b7383;
 }
 
 .form-field select:disabled {
@@ -107,7 +118,7 @@ body.gestion-page.new-ticket-page {
 
 .field-hint {
   padding-left: 4px;
-  color: #a0a6b1;
+  color: var(--ticket-muted);
   font-size: .82rem;
 }
 
@@ -216,7 +227,7 @@ body.gestion-page.new-ticket-page {
 .submit-ticket-button {
   border-color: var(--ticket-gold);
   background: var(--ticket-gold);
-  color: #fff;
+  color: var(--ticket-ink);
 }
 
 .submit-ticket-button:hover:not(:disabled) {
@@ -280,5 +291,70 @@ body.gestion-page.new-ticket-page {
   .form-actions {
     margin: 16px -18px 0;
     padding: 14px 18px;
+  }
+}
+
+/* Errores por campo y estados de la auditoría. */
+.field-error {
+  margin: 0;
+  padding-left: 4px;
+  color: #b42318;
+  font-size: .85rem;
+  font-weight: 500;
+}
+
+.field-error[hidden],
+.retry-button[hidden] {
+  display: none;
+}
+
+.problem-error {
+  grid-column: 2;
+}
+
+.form-field [aria-invalid="true"] {
+  border-color: #b42318;
+}
+
+.retry-button {
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid #7b8497;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ticket-navy);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-button:focus-visible,
+.submit-ticket-button:focus-visible,
+.retry-button:focus-visible,
+.problem-option input:focus-visible {
+  outline: 2px solid var(--ticket-navy);
+  outline-offset: 2px;
+}
+
+.not-allowed {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 32px 40px;
+  color: #253047;
+}
+
+.not-allowed p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+  .problem-error {
+    grid-column: auto;
+  }
+
+  .not-allowed {
+    padding: 24px 18px;
   }
 }

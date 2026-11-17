@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Consulta y administra los tickets de soporte de laboratorio.">
     <title>Gestión de tickets</title>
-    <link rel="icon" type="image/x-icon" href="/imgs/LOGO-OJO-BUHO-AMARILLO.png">
+    <link rel="icon" type="image/png" href="/imgs/logo-buho-96.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -20,7 +20,7 @@
           <img src="/imgs/iconos/arrowback.svg" alt="">
         </a>
         <h1>Gestión de tickets</h1>
-        <a class="new-ticket-button" href="./nuevo.html">
+        <a class="new-ticket-button" href="./nuevo.html" hidden>
           <span class="new-ticket-button__plus" aria-hidden="true">+</span>
           Nuevo ticket
         </a>
@@ -55,6 +55,22 @@
           placeholder="Buscar ticket..."
           autocomplete="off"
         >
+        <button id="date-toggle" class="filters-toggle" type="button"
+          aria-expanded="false" aria-controls="date-range-filter" aria-label="Filtrar por período">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>
+          </svg>
+          <span class="filters-toggle__dot" hidden></span>
+        </button>
+        <button id="filters-toggle" class="filters-toggle" type="button"
+          aria-expanded="false" aria-controls="status-filter classroom-filter" aria-label="Filtrar por estado y aula">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5h18l-7 8.5V19l-4 2v-7.5L3 5z"/>
+          </svg>
+          <span class="filters-toggle__dot" hidden></span>
+        </button>
       </section>
 
       <section class="ticket-table-card" aria-label="Lista de tickets">
@@ -68,7 +84,6 @@
                 <th scope="col">Reportado por</th>
                 <th scope="col">Estado</th>
                 <th scope="col">Responsable</th>
-                <th scope="col">Acciones</th>
               </tr>
             </thead>
             <tbody id="tickets-body"></tbody>
@@ -115,15 +130,21 @@
               <dt>Fecha</dt>
               <dd id="detail-date">—</dd>
             </div>
-            <div class="detail-item">
+            <div class="detail-item detail-item--key">
               <dt>Estado</dt>
               <dd id="detail-status">—</dd>
             </div>
-            <div class="detail-item">
+            <div class="detail-item detail-item--key">
               <dt>Responsable</dt>
               <dd id="detail-assignee">—</dd>
             </div>
+            <div class="detail-item detail-item--wide">
+              <dt>Categorías</dt>
+              <dd id="detail-categories" class="category-list">—</dd>
+            </div>
           </dl>
+
+          <button id="detail-more" class="detail-more" type="button" aria-expanded="false">Ver más</button>
 
           <div class="detail-description">
             <h3 id="detail-title">Problema</h3>
@@ -132,9 +153,8 @@
 
           <div class="history-section">
             <h3>Historial</h3>
-            <p id="detail-history" class="history-empty">
-              El historial todavía no está incluido en la respuesta de la API.
-            </p>
+            <p id="detail-history-message" class="history-empty" role="status">Cargando historial...</p>
+            <ol id="detail-history" class="history-list"></ol>
           </div>
 
           <div class="detail-actions" aria-label="Acciones del ticket">

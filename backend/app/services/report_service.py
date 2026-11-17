@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import false
+from sqlalchemy import or_
 from sqlalchemy.orm import aliased
 
 from app.models.aulas import Aula, Equipo
@@ -17,9 +17,11 @@ def limitar_tickets(query, usuario):
         return query.filter(Ticket.id_usuario == usuario.id_usuario)
     if usuario.id_rol == 2:
         if usuario.is_leader:
-            if usuario.laboratorio_asignado_id is None:
-                return query.filter(false())
-            return query.filter(Ticket.id_aula == usuario.laboratorio_asignado_id)
+            # El líder ve su laboratorio y, además, lo que le asignaron en otro.
+            return query.filter(or_(
+                Ticket.id_aula == usuario.laboratorio_asignado_id,
+                Ticket.id_tecnico == usuario.id_usuario,
+            ))
         return query.filter(Ticket.id_tecnico == usuario.id_usuario)
     raise HTTPException(status_code=403, detail="Tu rol no tiene permiso para consultar tickets")
 
@@ -28,7 +30,10 @@ def laboratorios_visibles(db, usuario):
     tickets = limitar_tickets(db.query(Ticket.id_aula), usuario)
     query = db.query(Aula)
     if usuario.id_rol == 2 and usuario.is_leader:
-        query = query.filter(Aula.id_aula == usuario.laboratorio_asignado_id)
+        query = query.filter(or_(
+            Aula.id_aula == usuario.laboratorio_asignado_id,
+            Aula.id_aula.in_(tickets),
+        ))
     elif usuario.id_rol != 1:
         query = query.filter(Aula.id_aula.in_(tickets))
     # Incluye aulas inactivas para conservar el historial de reportes.
