@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 
 from app.core.config import settings
+from app.core.http_transport import open_http
 
 
 def auth_request(method, path, payload=None):
@@ -21,10 +22,11 @@ def auth_request(method, path, payload=None):
                  "Content-Type": "application/json"},
     )
     try:
-        with urlopen(request, timeout=15) as response:
+        with open_http(request, timeout=15, opener=urlopen) as response:
             body = response.read()
             return json.loads(body) if body else None
     except HTTPError as error:
+        error.close()
         if error.code == 422:
             raise HTTPException(409, "El correo ya existe o los datos no son válidos") from None
         raise HTTPException(502, "No se pudo actualizar la cuenta en Supabase Auth") from None

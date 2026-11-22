@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from starlette.testclient import TestClient
 
 # Set test environment
-os.environ["SUPABASE_JWT_SECRET"] = "test-jwt-secret-key-1234567890"
+os.environ["SUPABASE_JWT_SECRET"] = "test-jwt-secret-key-1234567890-long"
 
 from app.db.database import Base, get_db
 from app.main import app

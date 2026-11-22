@@ -29,10 +29,10 @@ def test_suspension_applies_to_existing_signed_tokens(monkeypatch, suspended):
     credentials = HTTPAuthorizationCredentials(scheme='Bearer', credentials='previously-issued-token')
     if suspended:
         with pytest.raises(HTTPException) as error:
-            deps.get_current_user(credentials, db)
+            deps.get_authenticated_user(credentials, db)
         assert error.value.status_code == 403
     else:
-        assert deps.get_current_user(credentials, db) is user
+        assert deps.get_authenticated_user(credentials, db) is user
 
 
 def test_token_allows_small_auth_server_clock_skew(monkeypatch):

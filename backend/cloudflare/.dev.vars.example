@@ -1,0 +1,5 @@
+SUPABASE_URL=https://PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLIC_CLIENT_KEY
+SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVER_ONLY_KEY
+PASSWORD_RECOVERY_REDIRECT_URL=https://YOUR-PAGES-PROJECT.pages.dev/src/pages/login/nueva-contrasena
+# SUPABASE_JWT_SECRET is only needed if the project issues legacy HS256 tokens.

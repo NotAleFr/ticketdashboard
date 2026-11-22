@@ -2,7 +2,7 @@ import { supabaseClient } from './auth/supabase.js';
 import { getAccessToken } from './auth/session.js';
 
 // Dirección base de FastAPI. Si no está en .env, usa esta por defecto.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 // Debe coincidir con el detalle que devuelve backend/app/core/deps.py.
 export const PASSWORD_CHANGE_REQUIRED = 'Debes cambiar tu contraseña temporal antes de continuar.';
@@ -58,7 +58,7 @@ export async function apiFetch(path, options = {}) {
 
     // Con contraseña temporal solo el panel (que obliga a cambiarla) puede operar.
     if (response.status === 403 && detail === PASSWORD_CHANGE_REQUIRED
-        && !window.location.pathname.endsWith('/dashboard.html')) {
+        && !/^\/dashboard(?:\.html)?$/.test(window.location.pathname)) {
       window.location.href = '/dashboard.html';
     }
 

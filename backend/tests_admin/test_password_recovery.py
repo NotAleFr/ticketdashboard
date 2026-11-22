@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.core.deps import get_current_user
+from app.core.deps import get_authenticated_user
 from app.main import app
 from app.models.usuarios import Rol, Usuario
 from app.routers import auth
@@ -29,9 +29,9 @@ def user(client, db_session):
                    email='recovery@example.com', id_rol=3, debe_cambiar_password=True)
     db_session.add(user)
     db_session.commit()
-    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_authenticated_user] = lambda: user
     yield user
-    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_authenticated_user, None)
 
 
 def test_recovery_is_public_and_redirect_is_server_controlled(client, monkeypatch):

@@ -19,6 +19,8 @@ Android (Capacitor): [configuracion y comandos de desarrollo](docs/android.md).
 - `/frontend` - Aplicación cliente.
 - `/backend` - API REST y lógica de negocio.
 
+[Guía de despliegue gratuito en Cloudflare](docs/cloudflare.md).
+
 ## Ejecución local
 
 Requisitos: Python 3.10+, Node.js 20.19+ o 22.12+.

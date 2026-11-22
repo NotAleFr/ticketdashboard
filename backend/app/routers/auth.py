@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.http_transport import open_http
 from app.core.deps import get_authenticated_user, token_bearer
 from app.db.database import get_db
 from app.models.usuarios import Usuario
@@ -48,9 +49,10 @@ def supabase_auth_request(method, path, payload, token=None):
         data=json.dumps(payload).encode("utf-8"),
     )
     try:
-        with urlopen(request, timeout=15):
+        with open_http(request, timeout=15, opener=urlopen):
             return
     except HTTPError as error:
+        error.close()
         if error.code == 429:
             raise HTTPException(429, "Demasiados intentos. Inténtalo más tarde.") from None
         if token and error.code in (401, 403):

@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -9,9 +10,7 @@ DATABASE_URL = os.getenv(
     "postgresql+psycopg2://postgres:postgres@localhost:5432/postgres"
 )
 
-engine = create_engine(
-    DATABASE_URL
-)
+engine = None if sys.platform == "emscripten" else create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
