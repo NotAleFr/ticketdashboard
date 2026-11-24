@@ -111,3 +111,26 @@ def test_equipment_names_are_unique_per_classroom(client, role_accounts, db_sess
     assert nuevo(1).status_code == 201
     assert nuevo(50).status_code == 201
     assert nuevo(1).status_code == 409
+
+
+def test_admin_cannot_touch_another_admin_account(client, role_accounts, db_session, monkeypatch):
+    from app.models.usuarios import Usuario
+    from app.routers import usuarios
+    from uuid import uuid4
+    monkeypatch.setattr(usuarios, "auth_request", lambda *args: pytest.fail("No debe llegar a Supabase Auth"))
+    other = Usuario(id_usuario=uuid4(), nombre="Otro", apellido="Admin", email="otro.admin@example.com", id_rol=1, debe_cambiar_password=False)
+    db_session.add(other)
+    db_session.flush()
+    admin = headers_for(role_accounts["admin"])
+    path = f"/usuarios/{other.id_usuario}"
+    for cambio in ({"id_rol": 3}, {"id_rol": 2}, {"id_rol": 2, "is_leader": True, "laboratorio_asignado_id": 1}, {"telefono": "6621234567"}):
+        assert client.put(path, headers=admin, json=cambio).status_code == 403
+    assert client.post(f"{path}/password", headers=admin).status_code == 403
+    assert client.put(f"{path}/estado", headers=admin, json={"suspendido": True}).status_code == 403
+    assert client.put(f"{path}/estado", headers=admin, json={"suspendido": False}).status_code == 403
+    assert client.delete(path, headers=admin).status_code == 403
+    db_session.refresh(other)
+    assert other.id_rol == 1 and other.telefono is None and not other.debe_cambiar_password
+    # Su propio perfil sí lo edita, y promover a alguien a administrador sigue permitido.
+    assert client.put(f"/usuarios/{role_accounts['admin']}", headers=admin, json={"telefono": "6620000000"}).status_code == 200
+    assert client.put(f"/usuarios/{role_accounts['teacher']}", headers=admin, json={"id_rol": 1}).status_code == 200

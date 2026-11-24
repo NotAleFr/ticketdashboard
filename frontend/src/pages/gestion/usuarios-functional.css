@@ -77,7 +77,8 @@ button:disabled { opacity: .55; cursor: wait; }
 }
 
 .dialog-warning { margin: 14px 0 0; padding: 10px 12px; border: 1px solid #F5C26B; border-radius: 8px; background: #FFF8E6; color: #7A4B00; font-size: 13px; line-height: 1.45; }
-.temp-password { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.temp-password code { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-slate-light); font: 600 14px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+.temp-password { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.temp-password code { flex: 1 1 180px; min-width: 0; padding: 9px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-slate-light); font: 600 14px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace; overflow-wrap: anywhere; user-select: all; }
+.temp-password .btn-detail-action { width: auto; flex: 0 0 auto; white-space: nowrap; }
 .copy-status { margin: 6px 0 0; min-height: 1em; color: var(--text-secondary); font-size: 12px; }
 .copy-status:empty { display: none; }

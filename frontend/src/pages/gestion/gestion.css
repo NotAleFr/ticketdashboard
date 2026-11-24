@@ -323,15 +323,19 @@ body.gestion-page .flatpickr-day.endRange {
   white-space: nowrap;
 }
 
+/* Ocupa el ancho de la celda y luego baja de línea (máximo 2 líneas en la lista). */
 .ticket-problem__description {
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   max-width: 270px;
   margin-top: 3px;
   color: var(--ticket-muted);
   font-size: .78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .ticket-reporter {
@@ -536,6 +540,12 @@ body.gestion-page .flatpickr-day.endRange {
   margin: 0;
   color: #344054;
   line-height: 1.55;
+}
+
+/* Respeta los saltos de línea del reporte y corta palabras largas sin salirse de la caja. */
+.detail-description p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .history-empty {

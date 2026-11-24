@@ -40,6 +40,8 @@ const date = (value) => {
 // Primer carácter real (no media pareja sustituta de un emoji); vacío si no hay texto.
 const initial = (text) => [...(text || '').trim()][0] || '';
 const actions = document.querySelectorAll('.detail-actions-row button');
+// Las cuentas de otros administradores son de solo lectura (el backend responde 403).
+const otherAdmin = (user) => user.id_rol === 1 && user.id_usuario !== currentUserId;
 const status = (user) => ({ activo: 'Activo', invitado: 'Invitado', suspendido: 'Suspendido' })[user.estado];
 
 function badge(element, kind, label, prefix) {
@@ -59,10 +61,14 @@ function renderDetail(user) {
   const values = [user.email, user.telefono || '—', labs.find((lab) => lab.id_aula === user.laboratorio_asignado_id)?.nombre || 'Sin asignar', user.is_leader ? 'Sí' : 'No', date(user.ultimo_acceso), date(user.fecha_registro)];
   document.querySelectorAll('.metadata-value').forEach((element, index) => { element.textContent = values[index]; });
   $('.btn-detail-danger').textContent = user.estado === 'suspendido' ? 'Reactivar cuenta' : 'Suspender cuenta';
-  // El backend impide suspenderse o restablecerse la contraseña a uno mismo; aquí no se ofrecen.
+  // El backend impide suspenderse o restablecerse la contraseña a uno mismo, y
+  // tocar la cuenta de otro administrador; aquí no se ofrecen esas acciones.
   const self = user.id_usuario === currentUserId;
-  $('.btn-detail-danger').hidden = self;
-  $('.btn-detail-reset').hidden = self;
+  const locked = otherAdmin(user);
+  actions[0].hidden = locked;
+  $('.btn-detail-danger').hidden = self || locked;
+  $('.btn-detail-reset').hidden = self || locked;
+  $('#admin-locked-note').hidden = !locked;
 }
 
 function render() {
@@ -103,6 +109,7 @@ function render() {
     const buttons = row.querySelectorAll('button');
     buttons[0].title = `Editar usuario ${fullName(user)}`;
     buttons[0].setAttribute('aria-label', buttons[0].title);
+    buttons[0].hidden = otherAdmin(user);
     buttons[0].addEventListener('click', (event) => { event.stopPropagation(); select(); openDialog('edit'); });
     body.append(row);
   }
@@ -128,7 +135,7 @@ function openDialog(action) {
   mode = action;
   const user = users.find((item) => item.id_usuario === selectedId);
   editingId = action === 'create' ? null : user?.id_usuario;
-  if (action !== 'create' && !user) return;
+  if (action !== 'create' && (!user || otherAdmin(user))) return;
   form.reset();
   message.hidden = true;
   message.textContent = '';
@@ -156,9 +163,10 @@ function openDialog(action) {
   for (const input of $('#user-fields').querySelectorAll('input, select')) {
     if (input !== fields.email) input.disabled = !['create', 'edit'].includes(action);
   }
-  const self = action === 'edit' && editingId === currentUserId;
-  fields.rol.disabled = fields.rol.disabled || self;
-  $('#self-hint').hidden = !self;
+  // Un administrador solo edita su propia cuenta de administrador, y sin cambiar su rol.
+  const adminLocked = action === 'edit' && user?.id_rol === 1;
+  fields.rol.disabled = fields.rol.disabled || adminLocked;
+  $('#self-hint').hidden = !adminLocked;
   syncLabRequirement();
   updateTicketsWarning();
   submit.classList.toggle('btn-danger', action === 'status' && user?.estado !== 'suspendido');

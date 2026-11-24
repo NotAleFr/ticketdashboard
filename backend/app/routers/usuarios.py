@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, text
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime, timezone
@@ -8,7 +8,7 @@ import logging
 from app.models.aulas import Aula
 from app.services.user_admin import auth_request, auth_metadata
 from app.schemas.users import UsuarioAdminRead, UsuarioProvisionado, UsuarioEstadoUpdate
-from app.core.deps import SQL_SUSPENDIDA, filtrar_no_suspendidos, get_authenticated_user, get_current_user, require_admin
+from app.core.deps import filtrar_no_suspendidos, get_authenticated_user, get_current_user, require_admin
 from app.db.database import get_db
 from app.models.usuarios import Usuario
 from app.models.tickets import EstadoTicket, Ticket
@@ -39,46 +39,26 @@ def validate_profile(values, db, lab_actual=None):
         raise HTTPException(422, "El laboratorio no existe o está inactivo")
 
 
-def bloquear_administradores(db, admin):
-    """Serializa las operaciones que quitan acceso administrativo.
-
-    Bloquea todas las filas de administradores (siempre en el mismo orden, sin
-    interbloqueos) y vuelve a comprobar que quien hace la petición sigue siendo
-    un administrador habilitado. Así dos administradores que se suspenden o se
-    degradan mutuamente al mismo tiempo no pueden dejar el sistema sin ninguno:
-    la segunda petición espera y luego es rechazada.
-    """
-    admins = (
-        db.query(Usuario)
-        .filter(Usuario.id_rol == 1)
-        .order_by(Usuario.id_usuario)
-        .with_for_update()
-        .populate_existing()
-        .all()
-    )
-    if admin.id_usuario not in {row.id_usuario for row in admins}:
-        raise HTTPException(403, "Ya no tienes permisos de administrador")
-    if db.bind.dialect.name == "postgresql" and db.execute(
-        text(SQL_SUSPENDIDA), {"id": str(admin.id_usuario)}
-    ).scalar():
-        raise HTTPException(403, "La cuenta está suspendida")
-
-
-def usuario_bloqueado(db, id_usuario, admin, quita_admin):
+def usuario_editable(db, id_usuario, admin):
     """Lee el usuario con su fila bloqueada hasta el commit.
 
-    Si la operación le quita acceso a un administrador, primero se bloquean
-    todos los administradores (incluido él) para mantener un orden único."""
-    usuario = obtener_usuario(id_usuario, db, admin)
-    if usuario.id_rol == 1 and quita_admin:
-        bloquear_administradores(db, admin)
-    return (
+    La cuenta de otro administrador no se modifica desde la app: ni rol, perfil,
+    contraseña ni estado. La regla se evalúa con la fila bloqueada, así que una
+    promoción simultánea a administrador no puede colarse entre la lectura y el
+    cambio. Como ningún administrador puede quitarle acceso a otro (ni a sí
+    mismo), el sistema nunca se queda sin administradores."""
+    usuario = (
         db.query(Usuario)
         .filter(Usuario.id_usuario == id_usuario)
         .with_for_update()
         .populate_existing()
-        .one()
+        .one_or_none()
     )
+    if usuario is None:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if usuario.id_rol == 1 and usuario.id_usuario != admin.id_usuario:
+        raise HTTPException(403, "No puedes modificar la cuenta de otro administrador")
+    return usuario
 
 
 @router.get("/administracion", response_model=list[UsuarioAdminRead])
@@ -194,11 +174,11 @@ def actualizar_usuario(id_usuario: UUID, datos: UsuarioUpdate, db: Session = Dep
     changes = datos.model_dump(exclude_unset=True)
     # Fila bloqueada: dos ediciones simultáneas no pueden combinar cambios que
     # por separado son válidos (p. ej. un docente marcado como líder).
-    usuario = usuario_bloqueado(db, id_usuario, admin, quita_admin=changes.get("id_rol", 1) != 1)
+    usuario = usuario_editable(db, id_usuario, admin)
     values = UsuarioRead.model_validate(usuario).model_dump() | changes
-    validate_profile(values, db, lab_actual=usuario.laboratorio_asignado_id)
-    if id_usuario == admin.id_usuario and values["id_rol"] != 1:
+    if usuario.id_rol == 1 and values["id_rol"] != 1:
         raise HTTPException(422, "No puedes quitar tu propio acceso de administrador")
+    validate_profile(values, db, lab_actual=usuario.laboratorio_asignado_id)
     for campo in changes:
         setattr(usuario, campo, values[campo])
     db.commit()
@@ -208,7 +188,7 @@ def actualizar_usuario(id_usuario: UUID, datos: UsuarioUpdate, db: Session = Dep
 
 @router.delete("/{id_usuario}", status_code=204)
 def eliminar_usuario(id_usuario: UUID, db: Session = Depends(get_db), admin=Depends(require_admin)):
-    obtener_usuario(id_usuario, db, admin)
+    usuario_editable(db, id_usuario, admin)
     raise HTTPException(409, "Suspende la cuenta para conservar su historial")
 
 
@@ -217,20 +197,25 @@ def restablecer_password(id_usuario: UUID, db: Session = Depends(get_db), admin=
     if id_usuario == admin.id_usuario:
         # Quedaría bloqueado hasta cambiarla; para su propia cuenta usa "Cambiar contraseña".
         raise HTTPException(422, "Para tu propia cuenta usa la opción Cambiar contraseña del panel")
-    user = obtener_usuario(id_usuario, db, admin)
+    user = usuario_editable(db, id_usuario, admin)
     password = secrets.token_urlsafe(18)
     # Primero se exige el cambio: si Supabase falla después, la contraseña anterior
     # sigue sirviendo y solo se le pedirá cambiarla; nunca queda una contraseña
     # temporal activa sin la obligación de cambiarla.
+    anterior = user.debe_cambiar_password
     user.debe_cambiar_password = True
     db.commit()
     # Fila bloqueada durante el cambio en Supabase: un PUT /auth/password simultáneo
     # del propio usuario espera y no puede dejar la bandera en False justo antes de
     # que se instale la contraseña temporal.
-    user = (
-        db.query(Usuario).filter(Usuario.id_usuario == id_usuario)
-        .with_for_update().populate_existing().one()
-    )
+    try:
+        user = usuario_editable(db, id_usuario, admin)
+    except HTTPException:
+        # Lo hicieron administrador entre ambos commits: no se le exige nada.
+        db.rollback()
+        db.query(Usuario).filter(Usuario.id_usuario == id_usuario).update({"debe_cambiar_password": anterior})
+        db.commit()
+        raise
     user.debe_cambiar_password = True
     auth_request("PUT", f"/{id_usuario}", {"password": password})
     db.commit()
@@ -241,5 +226,5 @@ def restablecer_password(id_usuario: UUID, db: Session = Depends(get_db), admin=
 def cambiar_estado(id_usuario: UUID, datos: UsuarioEstadoUpdate, db: Session = Depends(get_db), admin=Depends(require_admin)):
     if id_usuario == admin.id_usuario and datos.suspendido:
         raise HTTPException(422, "No puedes suspender tu propia cuenta")
-    usuario_bloqueado(db, id_usuario, admin, quita_admin=datos.suspendido)
+    usuario_editable(db, id_usuario, admin)
     auth_request("PUT", f"/{id_usuario}", {"ban_duration": "876000h" if datos.suspendido else "none"})
