@@ -738,7 +738,8 @@ body.gestion-page .flatpickr-day.endRange {
   color: #fff;
 }
 
-.ticket-dialog__button:disabled {
+.ticket-dialog__button:disabled,
+.ticket-dialog__icon-button:disabled {
   cursor: wait;
   opacity: .6;
 }

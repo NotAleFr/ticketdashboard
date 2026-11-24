@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean
 from sqlalchemy import true
 import enum
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -16,6 +16,7 @@ class Aula(Base):
 
 class Equipo(Base):
     __tablename__ = "equipos"
+    __table_args__ = (UniqueConstraint("id_aula", "identificador", name="equipos_aula_identificador_key"),)
     id_equipo = Column(Integer, primary_key=True, index=True)
     tipo = Column(String, nullable=False)
     identificador = Column(String, nullable=False)

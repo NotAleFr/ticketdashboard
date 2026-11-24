@@ -40,10 +40,12 @@ def laboratorios_visibles(db, usuario):
     return query.order_by(Aula.nombre, Aula.id_aula).all()
 
 
+# Sonora usa UTC-7 todo el año. La BD guarda fecha_registro en UTC.
+ZONA_SONORA = timezone(timedelta(hours=-7))
+
+
 def rango_periodo(periodo, ahora=None):
-    # Sonora usa UTC-7 todo el año. La BD guarda fecha_registro en UTC.
-    zona = timezone(timedelta(hours=-7))
-    hoy = (ahora or datetime.now(timezone.utc)).astimezone(zona).replace(
+    hoy = (ahora or datetime.now(timezone.utc)).astimezone(ZONA_SONORA).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
     fin = hoy + timedelta(days=1)
@@ -56,8 +58,8 @@ def rango_periodo(periodo, ahora=None):
     if periodo == "todos":
         return None, None
     inicio = inicios[periodo]
-    return (inicio.astimezone(timezone.utc).replace(tzinfo=None),
-            fin.astimezone(timezone.utc).replace(tzinfo=None))
+    # Con zona explícita la comparación no depende del TimeZone de la sesión de PostgreSQL.
+    return inicio.astimezone(timezone.utc), fin.astimezone(timezone.utc)
 
 
 def consulta_reporte(db, usuario, estado, id_aula, periodo):

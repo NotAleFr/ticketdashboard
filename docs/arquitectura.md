@@ -41,8 +41,9 @@ API 2/
 |   ├── public/
 │   │   └── imgs/                 # Imagenes fijas
 │   ├── src/
-│   │   ├── main.js               # Archivo JS principal (inicializa la app, rutas, auth)
-│   │   ├── style.css             # Variables CSS globales, tipografia y resets base
+│   │   ├── api.js                # Cliente de la API (token, errores, sesión vencida)
+│   │   ├── native.js             # Solo en Android: botón Atrás (Capacitor App)
+│   │   ├── auth/                 # Cliente y sesión de Supabase
 │   │   ├── components/           # Componentes modulares reutilizables
 │   │   ├── pages/                # Vistas (Login, Dashboard, Formulario Ticket, Admin)
 |   │   │   ├── login/

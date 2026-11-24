@@ -24,5 +24,5 @@ class Usuario(Base):
     
     is_leader = Column(Boolean, nullable=False, default=False)
     debe_cambiar_password = Column(Boolean, nullable=False, default=True)
-    fecha_registro = Column(DateTime, server_default=func.now())
+    fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
 

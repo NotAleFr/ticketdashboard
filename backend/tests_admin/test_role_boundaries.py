@@ -52,7 +52,7 @@ def role_accounts(db_session):
 
 def headers_for(user_id, secret=None):
     token = jwt.encode(
-        {"sub": str(user_id), "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        {"sub": str(user_id), "aud": "authenticated", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
         secret or settings.supabase_jwt_secret,
         algorithm="HS256",
     )
@@ -125,7 +125,7 @@ def test_worker_jwks_client_caches_public_keys_and_accepts_a_valid_signature(
     monkeypatch.setattr(security, "_get_jwks_client", lambda _: jwks)
     monkeypatch.setattr(settings, "supabase_url", "https://example.supabase.co")
     token = jwt.encode(
-        {"sub": str(role_accounts["teacher"]), "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        {"sub": str(role_accounts["teacher"]), "aud": "authenticated", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
         private_key, algorithm="ES256", headers={"kid": "worker-test"},
     )
     headers = {"Authorization": f"Bearer {token}"}

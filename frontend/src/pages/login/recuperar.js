@@ -1,3 +1,5 @@
+import '../../native.js';
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 const recoveryForm = document.getElementById('recovery-form');
@@ -50,16 +52,24 @@ recoveryForm.addEventListener('submit', async (event) => {
   let cooldown = false;
 
   try {
-    const response = await fetch(`${API_URL}/auth/recovery`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailInput.value.trim() }),
-    });
+    let response;
+    try {
+      response = await fetch(`${API_URL}/auth/recovery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput.value.trim() }),
+      });
+    } catch {
+      // fetch solo falla así cuando no hay respuesta del servidor.
+      throw new Error('No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.');
+    }
     if (response.status === 429) cooldown = true;
     if (!response.ok) {
-      throw new Error(response.status === 429
-        ? 'Demasiados intentos. Inténtalo más tarde.'
-        : 'No fue posible enviar el enlace. Inténtalo más tarde.');
+      // 422: el navegador aceptó el correo (p. ej. usuario@localhost) pero el servidor no.
+      throw new Error({
+        422: 'Escribe un correo electrónico válido, por ejemplo nombre@dominio.com.',
+        429: 'Demasiados intentos. Inténtalo más tarde.',
+      }[response.status] || 'No fue posible enviar el enlace. Inténtalo más tarde.');
     }
 
     // Mensaje genérico a propósito: no revela si el correo está registrado o no.

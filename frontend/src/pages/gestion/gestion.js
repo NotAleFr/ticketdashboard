@@ -1,5 +1,5 @@
 import { apiJson } from '../../api.js';
-import { renderHistory } from './ticket-history.js';
+import { parseApiDate, renderHistory } from './ticket-history.js';
 import flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es.js';
 import 'flatpickr/dist/flatpickr.min.css';
@@ -52,11 +52,18 @@ let activeDialogAction = null;
 let actionFeedbackTimer = null;
 let historyKey = null;
 let historyRequest = 0;
+// Igual que el historial: solo la petición de técnicos más reciente puede pintar el diálogo.
+let assignmentRequest = 0;
+// Diálogo con una petición en curso: no se puede cerrar ni abrir otra acción.
+let busyDialog = null;
 const detailsSection = document.querySelector('.ticket-details');
 const detailMoreButton = document.getElementById('detail-more');
 const filtersSection = document.querySelector('.filters');
 const dateToggle = document.getElementById('date-toggle');
 const filtersToggle = document.getElementById('filters-toggle');
+
+// Búsqueda sin distinguir acentos ni mayúsculas (igual que usuarios.js).
+const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 function formatTicketId(id) {
   return `#${String(id).padStart(3, '0')}`;
@@ -74,9 +81,7 @@ function equipmentName(ticket) {
 }
 
 function formatDate(value) {
-  if (!value) return '—';
-
-  const date = new Date(value);
+  const date = parseApiDate(value);
   if (Number.isNaN(date.getTime())) return '—';
 
   return new Intl.DateTimeFormat('es-MX', {
@@ -287,7 +292,7 @@ function getAllowedStateChanges(ticket) {
 }
 
 function renderActionButtons(ticket) {
-  const canAssign = (isAdministrator() || (currentUser?.id_rol === 2 && currentUser.is_leader))
+  const canAssign = (isAdministrator() || isLabLeaderFor(ticket))
     && ['Abierto', 'En Proceso'].includes(ticket.estado);
   const stateChanges = getAllowedStateChanges(ticket);
   const canClose = stateChanges.some((change) => change.value === 'Cerrado');
@@ -337,6 +342,7 @@ function createFieldLabel(forId, text) {
 }
 
 async function openAssignmentDialog(ticket) {
+  const request = ++assignmentRequest;
   activeActionTicket = ticket;
   activeDialogAction = 'assign';
   actionDialogTitle.textContent = `Asignar responsable · ${formatTicketId(ticket.id_ticket)}`;
@@ -361,6 +367,8 @@ async function openAssignmentDialog(ticket) {
 
   try {
     const technicians = await apiJson(`/usuarios/tecnicos?id_aula=${encodeURIComponent(ticket.id_aula)}`);
+    // El diálogo se cerró o ya muestra otra acción: la respuesta llegó tarde.
+    if (request !== assignmentRequest) return;
     select.replaceChildren();
     const placeholder = document.createElement('option');
     placeholder.value = '';
@@ -381,13 +389,17 @@ async function openAssignmentDialog(ticket) {
         option.textContent += ' (asignado actualmente)';
       }
     }
-    select.focus();
+    const selectable = [...select.options].filter((option) => option.value && !option.disabled).length;
     select.disabled = technicians.length === 0;
-    actionDialogSubmit.disabled = technicians.length === 0;
+    actionDialogSubmit.disabled = selectable === 0;
     if (technicians.length === 0) {
       setDialogError(actionDialogError, 'No hay técnicos disponibles para el aula de este ticket.');
+    } else if (selectable === 0) {
+      setDialogError(actionDialogError, 'No hay otro técnico disponible: el único técnico de esta aula ya es el responsable.');
     }
+    select.focus();
   } catch (error) {
+    if (request !== assignmentRequest) return;
     select.replaceChildren();
     select.disabled = true;
     actionDialogSubmit.disabled = true;
@@ -396,6 +408,8 @@ async function openAssignmentDialog(ticket) {
 }
 
 function openStateDialog(ticket) {
+  // Invalida una carga de técnicos pendiente para que no pinte este diálogo.
+  assignmentRequest += 1;
   activeActionTicket = ticket;
   activeDialogAction = 'state';
   actionDialogTitle.textContent = `Cambiar estado · ${formatTicketId(ticket.id_ticket)}`;
@@ -450,30 +464,47 @@ function openCloseConfirmation(ticket) {
   openDialog(closeTicketDialog);
 }
 
-async function sendTicketAction(path, body, successMessage) {
-  const ticket = activeActionTicket;
-  if (!ticket) return;
+// Mientras la petición está en curso el diálogo no se puede cerrar (Cancelar, × ni Escape).
+function setDialogBusy(dialog, busy) {
+  busyDialog = busy ? dialog : null;
+  dialog.setAttribute('aria-busy', String(busy));
+  // Chromium deja de poder cancelar Escape si se repite sin otra interacción;
+  // closedby="none" lo bloquea del todo y 'cancel' cubre a los navegadores sin soporte.
+  if (busy) dialog.setAttribute('closedby', 'none');
+  else dialog.removeAttribute('closedby');
+  for (const button of dialog.querySelectorAll('[data-close-dialog], button[type="submit"]')) {
+    button.disabled = busy;
+  }
+}
 
-  actionDialogSubmit.disabled = true;
-  closeDialogSubmit.disabled = true;
+// El resultado siempre se muestra en el diálogo que inició la petición.
+async function sendTicketAction(dialog, path, body, successMessage) {
+  const ticket = activeActionTicket;
+  if (!ticket || busyDialog) return;
+
+  const errorElement = dialog === closeTicketDialog ? closeDialogError : actionDialogError;
+  let succeeded = false;
+  setDialogBusy(dialog, true);
 
   try {
     await apiJson(path, {
       method: 'POST',
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
-    closeDialog(actionDialog);
-    closeDialog(closeTicketDialog);
-    showActionFeedback(successMessage);
-    historyKey = null;
-    await loadTickets();
+    succeeded = true;
   } catch (error) {
-    const errorElement = closeTicketDialog.open ? closeDialogError : actionDialogError;
-    setDialogError(errorElement, error.message);
+    // Si el navegador cerró el diálogo de todos modos, el error se avisa fuera de él.
+    if (dialog.open) setDialogError(errorElement, error.message);
+    else showActionFeedback(error.message, 'error');
   } finally {
-    actionDialogSubmit.disabled = false;
-    closeDialogSubmit.disabled = false;
+    setDialogBusy(dialog, false);
   }
+
+  if (!succeeded) return;
+  closeDialog(dialog);
+  showActionFeedback(successMessage);
+  historyKey = null;
+  await loadTickets();
 }
 
 async function submitTicketAction(event) {
@@ -488,6 +519,7 @@ async function submitTicketAction(event) {
     }
 
     await sendTicketAction(
+      actionDialog,
       `/tickets/${activeActionTicket.id_ticket}/asignar`,
       { id_tecnico: technicianId },
       'Responsable asignado correctamente.',
@@ -505,6 +537,7 @@ async function submitTicketAction(event) {
     }
 
     await sendTicketAction(
+      actionDialog,
       `/tickets/${activeActionTicket.id_ticket}/resolver`,
       { texto_solucion: solution },
       'Ticket resuelto y solución registrada.',
@@ -514,6 +547,7 @@ async function submitTicketAction(event) {
     openCloseConfirmation(activeActionTicket);
   } else if (nextState === 'En Proceso') {
     await sendTicketAction(
+      actionDialog,
       `/tickets/${activeActionTicket.id_ticket}/reabrir`,
       null,
       'Ticket reabierto y devuelto a En Proceso.',
@@ -524,7 +558,7 @@ async function submitTicketAction(event) {
 function getVisibleTickets() {
   const status = statusFilter.value;
   const classroom = classroomFilter.value;
-  const searchText = ticketSearch.value.trim().toLowerCase();
+  const searchText = normalize(ticketSearch.value.trim());
   // Include both whole days in the same local calendar as ticket details.
   const from = dateRange[0] ? new Date(dateRange[0]) : null;
   const until = dateRange[1] ? new Date(dateRange[1]) : null;
@@ -533,8 +567,10 @@ function getVisibleTickets() {
   return tickets.filter((ticket) => {
     const matchesStatus = !status || ticket.estado === status;
     const matchesClassroom = !classroom || String(ticket.id_aula) === classroom;
-    const searchableText = [
+    const searchableText = normalize([
       formatTicketId(ticket.id_ticket),
+      // "#5" también encuentra el ticket que se muestra como "#005".
+      `#${ticket.id_ticket}`,
       ticket.nombre_ticket,
       ticket.descripcion,
       classroomName(ticket),
@@ -543,10 +579,10 @@ function getVisibleTickets() {
       ticket.nombre_reportante,
       ticket.nombre_tecnico,
       ...(ticket.problemas || []),
-    ].join(' ').toLowerCase();
+    ].join(' '));
     const matchesSearch = !searchText || searchableText.includes(searchText);
 
-    const registeredAt = ticket.fecha_registro ? new Date(ticket.fecha_registro) : new Date(NaN);
+    const registeredAt = parseApiDate(ticket.fecha_registro);
     const matchesDates = (!from && !until) || (
       !Number.isNaN(registeredAt.getTime())
       && (!from || registeredAt >= from)
@@ -578,7 +614,10 @@ function renderTickets() {
     ticketsBody.append(createTicketRow(ticket));
   }
 
-  ticketsCount.textContent = `${visibleTickets.length} ${visibleTickets.length === 1 ? 'ticket' : 'tickets'}`;
+  // Tras un fallo se conserva el aviso hasta la siguiente carga correcta.
+  ticketsCount.textContent = requestState === 'error'
+    ? 'Error al cargar'
+    : `${visibleTickets.length} ${visibleTickets.length === 1 ? 'ticket' : 'tickets'}`;
 
   if (requestState === 'loading') {
     ticketsMessage.textContent = 'Cargando tickets...';
@@ -655,11 +694,9 @@ async function loadTickets() {
 
     renderTickets();
   } catch (error) {
-    tickets = [];
-    selectedTicketId = null;
+    // Un fallo al actualizar no borra los tickets que ya se mostraban.
     requestState = 'error';
     ticketsMessage.textContent = `No se pudieron cargar los tickets: ${error.message}`;
-    ticketsCount.textContent = 'Error al cargar';
     renderTickets();
   } finally {
     refreshButton.disabled = false;
@@ -690,7 +727,10 @@ const datePicker = flatpickr(dateRangeFilter, {
 });
 clearDateRange.addEventListener('click', () => {
   datePicker.clear();
+  // El foco vuelve al campo (el botón se oculta), pero Flatpickr abre al enfocar:
+  // se cierra en el mismo instante para no tapar la lista.
   dateRangeFilter.focus();
+  datePicker.close();
 });
 classroomFilter.addEventListener('change', renderTickets);
 ticketSearch.addEventListener('input', renderTickets);
@@ -704,20 +744,26 @@ detailMoreButton.addEventListener('click', () => {
   setDetailExpanded(!detailsSection.classList.contains('is-expanded'));
 });
 
-refreshButton.addEventListener('click', () => {
+refreshButton.addEventListener('click', async () => {
   // Una actualización manual vuelve a pedir el historial aunque el estado no haya cambiado.
   historyKey = null;
-  loadTickets();
+  refreshButton.disabled = true;
+  // Si el perfil no cargó al inicio, se reintenta para mostrar acciones y "Nuevo ticket".
+  if (!currentUser) await loadCurrentUser();
+  await loadTickets();
 });
 assignTicketButton.addEventListener('click', () => {
+  if (busyDialog) return;
   const ticket = getSelectedTicket();
   if (ticket) openAssignmentDialog(ticket);
 });
 changeTicketStateButton.addEventListener('click', () => {
+  if (busyDialog) return;
   const ticket = getSelectedTicket();
   if (ticket) openStateDialog(ticket);
 });
 closeTicketButton.addEventListener('click', () => {
+  if (busyDialog) return;
   const ticket = getSelectedTicket();
   if (ticket) openCloseConfirmation(ticket);
 });
@@ -726,6 +772,7 @@ closeTicketForm.addEventListener('submit', (event) => {
   event.preventDefault();
   if (!activeActionTicket) return;
   sendTicketAction(
+    closeTicketDialog,
     `/tickets/${activeActionTicket.id_ticket}/cerrar`,
     null,
     'Ticket cerrado correctamente.',
@@ -733,12 +780,20 @@ closeTicketForm.addEventListener('submit', (event) => {
 });
 document.querySelectorAll('[data-close-dialog]').forEach((button) => {
   button.addEventListener('click', () => {
-    closeDialog(actionDialog);
-    closeDialog(closeTicketDialog);
+    if (!busyDialog) closeDialog(button.closest('dialog'));
   });
 });
+for (const dialog of [actionDialog, closeTicketDialog]) {
+  dialog.addEventListener('cancel', (event) => {
+    if (busyDialog === dialog) event.preventDefault();
+  });
+}
+// Al cerrar el diálogo se descarta la carga de técnicos que siga en camino.
+actionDialog.addEventListener('close', () => {
+  assignmentRequest += 1;
+});
 
-async function initializePage() {
+async function loadCurrentUser() {
   try {
     currentUser = await apiJson('/usuarios/me');
     // Solo docentes y administradores crean tickets (el backend rechaza al resto).
@@ -746,7 +801,10 @@ async function initializePage() {
   } catch (error) {
     showActionFeedback(`No se pudo cargar tu perfil: ${error.message}`, 'error');
   }
+}
 
+async function initializePage() {
+  await loadCurrentUser();
   await loadTickets();
 }
 

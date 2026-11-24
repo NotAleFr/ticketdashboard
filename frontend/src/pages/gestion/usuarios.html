@@ -13,7 +13,6 @@
     href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
     rel="stylesheet">
 
-  <link href="../login/login.css" rel="stylesheet" type="text/css" media="all">
   <link href="./usuarios.css" rel="stylesheet" type="text/css" media="all">
   <link href="./usuarios-functional.css" rel="stylesheet">
 </head>
@@ -34,7 +33,7 @@
           <h1 class="header-title">Administración de usuarios</h1>
         </div>
 
-        <button type="button" class="btn-add-user" disabled title="Crear un nuevo usuario">
+        <button type="button" class="btn-add-user" hidden disabled title="Crear un nuevo usuario">
           <span class="plus-sign">+</span>
           <span>Nuevo usuario</span>
         </button>
@@ -45,7 +44,14 @@
         <a href="../../../dashboard.html" class="btn-detail-action">Volver al inicio</a>
       </section>
 
-      <section class="filters-search-bar" aria-label="Filtros y búsqueda de usuarios">
+      <!-- Estado de carga y errores: las secciones de administración siguen ocultas
+           hasta confirmar que quien entra es administrador. -->
+      <section class="load-status-card" aria-live="polite">
+        <p id="load-status-text">Cargando usuarios...</p>
+        <button type="button" class="btn-detail-action" id="retry-load" hidden>Reintentar</button>
+      </section>
+
+      <section hidden class="filters-search-bar" aria-label="Filtros y búsqueda de usuarios">
         <div class="filter-dropdown-wrapper">
           <select class="filter-select" aria-label="Filtrar por rol">
             <option value="todos" selected>Rol: todos</option>
@@ -79,7 +85,7 @@
         </div>
       </section>
 
-      <section class="user-table-card" aria-label="Listado de usuarios">
+      <section hidden class="user-table-card" aria-label="Listado de usuarios">
         <div class="table-responsive">
           <table class="user-table">
             <thead>
@@ -104,16 +110,16 @@
       <section hidden class="user-detail-card" aria-label="Detalle del usuario seleccionado">
         <div class="detail-header">
           <div class="detail-identity">
-            <div class="avatar-circle" aria-hidden="true">LM</div>
+            <div class="avatar-circle" aria-hidden="true"></div>
             <div class="identity-info">
-              <h2 class="identity-name">Lucía Martínez</h2>
-              <span class="identity-code">USR-004</span>
+              <h2 class="identity-name"></h2>
+              <span class="identity-code"></span>
             </div>
           </div>
 
           <div class="detail-status-badges">
-            <span class="badge-role lider">Líder Lab</span>
-            <span class="badge-status activo">Activa</span>
+            <span class="badge-role"></span>
+            <span class="badge-status"></span>
           </div>
         </div>
 
@@ -121,30 +127,30 @@
           <div class="metadata-col">
             <div class="metadata-item">
               <span class="metadata-label">Correo:</span>
-              <span class="metadata-value">lucia.martinez@unison.mx</span>
+              <span class="metadata-value"></span>
             </div>
             <div class="metadata-item">
               <span class="metadata-label">Teléfono:</span>
-              <span class="metadata-value">+34 612 438 920</span>
+              <span class="metadata-value"></span>
             </div>
             <div class="metadata-item">
               <span class="metadata-label">Lab. asignado:</span>
-              <span class="metadata-value">Aula 5J-CO203</span>
+              <span class="metadata-value"></span>
             </div>
           </div>
 
           <div class="metadata-col">
             <div class="metadata-item">
               <span class="metadata-label">Líder de Lab:</span>
-              <span class="metadata-value">Sí (is_leader)</span>
+              <span class="metadata-value"></span>
             </div>
             <div class="metadata-item">
               <span class="metadata-label">Último acceso:</span>
-              <span class="metadata-value">09/09/2026 · 08:42</span>
+              <span class="metadata-value"></span>
             </div>
             <div class="metadata-item">
               <span class="metadata-label">Alta:</span>
-              <span class="metadata-value">14/02/2024</span>
+              <span class="metadata-value"></span>
             </div>
           </div>
         </div>
@@ -153,7 +159,7 @@
 
         <div class="detail-actions-row">
           <button type="button" class="btn-detail-action">Editar usuario</button>
-          <button type="button" class="btn-detail-action">Restablecer contraseña</button>
+          <button type="button" class="btn-detail-action btn-detail-reset">Restablecer contraseña</button>
           <button type="button" class="btn-detail-action btn-detail-danger">Suspender cuenta</button>
         </div>
       </section>
@@ -161,18 +167,18 @@
     </main>
   </div>
 <template id="user-row-template"><tr>
-                <td class="td-usuario">Laura Gómez</td>
-                <td class="td-correo">laura.gomez@unison.mx</td>
+                <td class="td-usuario"></td>
+                <td class="td-correo"></td>
                 <td>
-                  <span class="badge-role administrador">Administrador</span>
+                  <span class="badge-role"></span>
                 </td>
                 <td>
-                  <span class="badge-status activo">Activo</span>
+                  <span class="badge-status"></span>
                 </td>
-                <td class="td-acceso">Hoy, 08:42</td>
+                <td class="td-acceso"></td>
                 <td class="td-acciones">
                   <div class="actions-group">
-                    <button type="button" class="btn-icon-action" title="Editar usuario Laura Gómez"
+                    <button type="button" class="btn-icon-action" title="Editar usuario"
                       aria-label="Editar usuario">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">

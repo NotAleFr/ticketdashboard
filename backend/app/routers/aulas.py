@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -7,6 +9,7 @@ from app.db.database import get_db
 from app.models.aulas import Aula, Equipo
 from app.models.tickets import EstadoTicket, Ticket
 from app.services.ticket_service import tickets_en_proceso
+from app.core.tipos import Entero
 from app.schemas.aulas import (
     AulaCreate, AulaUpdate, AulaRead,
     EquipoCreate, EquipoUpdate, EquipoRead,
@@ -54,7 +57,7 @@ def listar_aulas(activas: bool = False, db: Session = Depends(get_db)):
 
 
 @router.get("/aulas/{id_aula}", response_model=AulaRead)
-def obtener_aula(id_aula: int, db: Session = Depends(get_db)):
+def obtener_aula(id_aula: Entero, db: Session = Depends(get_db)):
     return _aula(db, id_aula)
 
 
@@ -66,7 +69,7 @@ def crear_aula(datos: AulaCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/aulas/{id_aula}", response_model=AulaRead, dependencies=[Depends(require_admin)])
-def actualizar_aula(id_aula: int, datos: AulaUpdate, db: Session = Depends(get_db)):
+def actualizar_aula(id_aula: Entero, datos: AulaUpdate, db: Session = Depends(get_db)):
     aula = _aula(db, id_aula)
     for campo, valor in datos.model_dump(exclude_unset=True).items():
         if valor is None and campo != "ubicacion":
@@ -76,7 +79,7 @@ def actualizar_aula(id_aula: int, datos: AulaUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/aulas/{id_aula}", status_code=204, dependencies=[Depends(require_admin)])
-def desactivar_aula(id_aula: int, db: Session = Depends(get_db)):
+def desactivar_aula(id_aula: Entero, db: Session = Depends(get_db)):
     # Baja lógica: conserva tickets y reportes históricos del aula.
     _aula(db, id_aula).activo = False
     db.commit()
@@ -85,15 +88,21 @@ def desactivar_aula(id_aula: int, db: Session = Depends(get_db)):
 # ---------------- Equipos ----------------
 
 @router.get("/equipos", response_model=list[EquipoRead])
-def listar_equipos(id_aula: int | None = None, db: Session = Depends(get_db)):
+def listar_equipos(id_aula: Entero | None = None, db: Session = Depends(get_db)):
     query = db.query(Equipo)
     if id_aula is not None:
         query = query.filter(Equipo.id_aula == id_aula)
-    return query.order_by(Equipo.identificador).all()
+    # Orden natural: "Equipo 2" antes que "Equipo 10".
+    return sorted(query.all(), key=lambda equipo: _orden_natural(equipo.identificador))
+
+
+def _orden_natural(texto: str):
+    return [(0, int(parte), "") if parte.isdigit() else (1, 0, parte.casefold())
+            for parte in re.split(r"(\d+)", texto) if parte]
 
 
 @router.get("/equipos/{id_equipo}", response_model=EquipoRead)
-def obtener_equipo(id_equipo: int, db: Session = Depends(get_db)):
+def obtener_equipo(id_equipo: Entero, db: Session = Depends(get_db)):
     return _equipo(db, id_equipo)
 
 
@@ -106,7 +115,7 @@ def crear_equipo(datos: EquipoCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/equipos/{id_equipo}", response_model=EquipoRead, dependencies=[Depends(require_admin)])
-def actualizar_equipo(id_equipo: int, datos: EquipoUpdate, db: Session = Depends(get_db)):
+def actualizar_equipo(id_equipo: Entero, datos: EquipoUpdate, db: Session = Depends(get_db)):
     equipo = _equipo(db, id_equipo, bloquear=True)
     cambios = datos.model_dump(exclude_unset=True)
     if any(valor is None for valor in cambios.values()):
@@ -127,7 +136,7 @@ def actualizar_equipo(id_equipo: int, datos: EquipoUpdate, db: Session = Depends
 
 
 @router.delete("/equipos/{id_equipo}", status_code=204, dependencies=[Depends(require_admin)])
-def dar_de_baja_equipo(id_equipo: int, db: Session = Depends(get_db)):
+def dar_de_baja_equipo(id_equipo: Entero, db: Session = Depends(get_db)):
     # Baja lógica: el equipo queda Inoperativo y conserva su historial.
     _equipo(db, id_equipo, bloquear=True).estado_actual = "Inoperativo"
     db.commit()

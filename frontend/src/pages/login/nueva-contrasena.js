@@ -100,6 +100,8 @@ resetForm.addEventListener('submit', async (event) => {
     await apiJson('/auth/password', {
       method: 'PUT',
       body: JSON.stringify({ password: newPassword }),
+      // Un 401 aquí significa que el enlace ya no sirve: no se manda al login.
+      redirectOnUnauthorized: false,
     });
 
     // La contraseña ya cambió: desde aquí no se vuelve a ofrecer el formulario.
@@ -119,6 +121,15 @@ resetForm.addEventListener('submit', async (event) => {
     continueLink.hidden = false;
     continueLink.focus();
   } catch (error) {
+    if (error.status === 401) {
+      setRecoveryFlag(false);
+      resetForm.hidden = true;
+      invalidBlock.querySelector('.auth__message').textContent =
+        'La sesión no es válida. Solicita un enlace nuevo.';
+      invalidBlock.hidden = false;
+      console.error('Sesión de recuperación rechazada:', error);
+      return;
+    }
     errorMessage.textContent = error.message || 'No fue posible actualizar la contraseña.';
     errorMessage.hidden = false;
 

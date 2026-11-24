@@ -29,9 +29,16 @@ const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, 
 const dateFormat = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Hermosillo' });
 const date = (value) => {
   if (!value) return 'Sin acceso';
-  const utc = /Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`;
-  return dateFormat.format(new Date(utc));
+  // El backend manda fechas sin zona horaria que están en UTC; se marcan como tales.
+  // Se recortan los microsegundos porque no todos los WebView los aceptan.
+  const text = String(value).trim().replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1');
+  const naive = /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(text);
+  const parsed = new Date(naive ? `${text}Z` : text);
+  // Una fecha inválida haría que Intl lance RangeError.
+  return Number.isNaN(parsed.getTime()) ? '—' : dateFormat.format(parsed);
 };
+// Primer carácter real (no media pareja sustituta de un emoji); vacío si no hay texto.
+const initial = (text) => [...(text || '').trim()][0] || '';
 const actions = document.querySelectorAll('.detail-actions-row button');
 const status = (user) => ({ activo: 'Activo', invitado: 'Invitado', suspendido: 'Suspendido' })[user.estado];
 
@@ -46,15 +53,16 @@ function renderDetail(user) {
   $('.identity-name').textContent = fullName(user);
   $('.identity-code').textContent = `USR-${user.id_usuario.slice(0, 8)}`;
   $('.identity-code').title = user.id_usuario;
-  $('.avatar-circle').textContent = `${user.nombre[0]}${user.apellido[0]}`.toUpperCase();
+  $('.avatar-circle').textContent = `${initial(user.nombre)}${initial(user.apellido)}`.toUpperCase() || '?';
   badge($('.detail-status-badges .badge-role'), ...role(user), 'badge-role');
   badge($('.detail-status-badges .badge-status'), user.estado, status(user), 'badge-status');
   const values = [user.email, user.telefono || '—', labs.find((lab) => lab.id_aula === user.laboratorio_asignado_id)?.nombre || 'Sin asignar', user.is_leader ? 'Sí' : 'No', date(user.ultimo_acceso), date(user.fecha_registro)];
   document.querySelectorAll('.metadata-value').forEach((element, index) => { element.textContent = values[index]; });
   $('.btn-detail-danger').textContent = user.estado === 'suspendido' ? 'Reactivar cuenta' : 'Suspender cuenta';
-  // El backend impide suspenderse a uno mismo; aquí no se ofrece la acción.
+  // El backend impide suspenderse o restablecerse la contraseña a uno mismo; aquí no se ofrecen.
   const self = user.id_usuario === currentUserId;
   $('.btn-detail-danger').hidden = self;
+  $('.btn-detail-reset').hidden = self;
 }
 
 function render() {
@@ -138,6 +146,12 @@ function openDialog(action) {
     fields.rol.value = user.is_leader && user.id_rol === 2 ? 'lider' : String(user.id_rol);
     fields.laboratorio.value = user.laboratorio_asignado_id ?? '';
   }
+  // El backend rechaza asignar un laboratorio inactivo; solo se conserva el que ya tenía.
+  const currentLab = action === 'edit' ? user?.laboratorio_asignado_id : null;
+  for (const option of fields.laboratorio.options) {
+    const lab = labs.find((item) => String(item.id_aula) === option.value);
+    option.disabled = Boolean(lab && !lab.activo && lab.id_aula !== currentLab);
+  }
   fields.email.disabled = action !== 'create';
   for (const input of $('#user-fields').querySelectorAll('input, select')) {
     if (input !== fields.email) input.disabled = !['create', 'edit'].includes(action);
@@ -184,7 +198,7 @@ form.addEventListener('submit', async (event) => {
     message.textContent = result?.password_temporal ? 'Contraseña temporal (entrégala al usuario):' : 'Cambios guardados.';
     message.hidden = false;
     if (result?.password_temporal) showTemporaryPassword(result.password_temporal);
-    try { await reload(); } catch { message.textContent += '\nNo se pudo actualizar la lista. Recarga la página.'; }
+    try { await reload(); } catch { message.textContent += '\nNo se pudo actualizar la lista. Vuelve a abrir Usuarios para ver los cambios.'; }
   } catch (error) {
     message.textContent = error.message;
     message.hidden = false;
@@ -239,7 +253,7 @@ $('#copy-password').addEventListener('click', async () => {
   } catch {
     // Sin permiso de portapapeles: se deja seleccionada para copiarla a mano.
     getSelection().selectAllChildren(value);
-    $('#copy-status').textContent = 'No se pudo copiar automáticamente. Ya está seleccionada: cópiala con Ctrl+C.';
+    $('#copy-status').textContent = 'No se pudo copiar automáticamente. Ya está seleccionada: cópiala manualmente (en el celular, mantén presionado el texto).';
   }
 });
 
@@ -262,25 +276,48 @@ roleFilter.addEventListener('change', render);
 statusFilter.addEventListener('change', render);
 search.addEventListener('input', render);
 
-try {
-  const currentUser = await apiJson('/usuarios/me');
-  if (currentUser.id_rol !== 1) {
-    // Sin permiso no se muestra el panel: solo el aviso y el camino de vuelta.
-    for (const section of document.querySelectorAll('.filters-search-bar, .user-table-card, .user-detail-card, .btn-add-user')) section.hidden = true;
-    $('.not-allowed-card').hidden = false;
-    $('.btn-volver').href = '../../../dashboard.html';
-  } else {
+const loadStatus = $('.load-status-card');
+const loadText = $('#load-status-text');
+const retryButton = $('#retry-load');
+
+// fetch() falla con un TypeError genérico ("Failed to fetch") cuando no hay red o el servidor no responde.
+function loadErrorMessage(error) {
+  const message = error?.message || '';
+  if (/failed to fetch|networkerror|load failed|network request failed/i.test(message)) {
+    return 'No hay conexión con el servidor. Revisa tu conexión a internet e inténtalo de nuevo.';
+  }
+  return `No se pudo cargar la lista: ${message || 'error desconocido'}`;
+}
+
+async function loadPage() {
+  retryButton.hidden = true;
+  loadText.textContent = 'Cargando usuarios...';
+  loadStatus.hidden = false;
+  try {
+    const currentUser = await apiJson('/usuarios/me');
+    if (currentUser.id_rol !== 1) {
+      // Sin permiso no se muestra el panel: solo el aviso y el camino de vuelta.
+      loadStatus.hidden = true;
+      $('.not-allowed-card').hidden = false;
+      $('.btn-volver').href = '../../../dashboard.html';
+      return;
+    }
     currentUserId = currentUser.id_usuario;
     labs = await apiJson('/aulas');
+    fields.laboratorio.length = 1; // Solo "Sin asignar": un reintento no duplica opciones.
     for (const lab of labs) fields.laboratorio.add(new Option(`${lab.nombre}${lab.activo ? '' : ' (inactivo)'}`, lab.id_aula));
     await reload();
+    // Administrador confirmado y datos cargados: ya se puede mostrar el panel.
+    loadStatus.hidden = true;
+    for (const section of document.querySelectorAll('.filters-search-bar, .user-table-card, .btn-add-user')) section.hidden = false;
     $('.btn-add-user').disabled = false;
+  } catch (error) {
+    // En Android no hay botón de recargar: el reintento vuelve a pedir todo.
+    loadText.textContent = loadErrorMessage(error);
+    retryButton.hidden = false;
+    detail.hidden = true;
   }
-} catch (error) {
-  body.replaceChildren();
-  const cell = body.insertRow().insertCell();
-  cell.colSpan = 6;
-  cell.textContent = `No se pudo cargar la lista: ${error.message}`;
-  $('.table-footer-text').textContent = 'Usuarios no disponibles';
-  detail.hidden = true;
 }
+
+retryButton.addEventListener('click', loadPage);
+await loadPage();

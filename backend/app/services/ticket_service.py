@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.tickets import EstadoTicket, Ticket
 from app.models.usuarios import Usuario
+from app.core.deps import cuenta_suspendida
 from app.models.aulas import Aula, Equipo
 from app.models.tracking import HistorialEstado, Solucion
 
@@ -72,13 +73,19 @@ class TicketService:
         if not puede_asignar:
             raise HTTPException(403, "No tienes permiso para asignar este ticket")
 
+        # Fila bloqueada: si un administrador cambia el rol o el laboratorio del técnico
+        # al mismo tiempo, una de las dos operaciones espera a la otra.
         tecnico = (
             db.query(Usuario)
             .filter(Usuario.id_usuario == id_tecnico)
+            .with_for_update()
+            .populate_existing()
             .first()
         )
         if not tecnico or tecnico.id_rol != 2:
             raise HTTPException(404, "Técnico no encontrado")
+        if cuenta_suspendida(db, tecnico.id_usuario):
+            raise HTTPException(400, "El técnico tiene la cuenta suspendida")
 
         es_otro_laboratorio = tecnico.laboratorio_asignado_id != ticket.id_aula
         if not self._es_admin(usuario) and es_otro_laboratorio:

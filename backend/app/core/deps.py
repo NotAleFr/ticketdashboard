@@ -23,6 +23,25 @@ ROL_TECNICO = 2
 ROL_MAESTRO = 3
 
 
+# Supabase guarda la suspensión en auth.users, que solo existe en PostgreSQL.
+SQL_SUSPENDIDA = "SELECT banned_until > now() FROM auth.users WHERE id = :id"
+
+
+def cuenta_suspendida(db: Session, id_usuario) -> bool:
+    if db.bind.dialect.name != "postgresql":
+        return False
+    return bool(db.execute(text(SQL_SUSPENDIDA), {"id": str(id_usuario)}).scalar())
+
+
+def filtrar_no_suspendidos(db: Session, query):
+    """Excluye de una consulta de Usuario las cuentas suspendidas en Supabase."""
+    if db.bind.dialect.name != "postgresql":
+        return query
+    return query.filter(text(
+        "NOT EXISTS (SELECT 1 FROM auth.users au WHERE au.id = usuarios.id_usuario AND au.banned_until > now())"
+    ))
+
+
 def get_authenticated_user(
     credentials: HTTPAuthorizationCredentials = Depends(token_bearer),
     db: Session = Depends(get_db),
@@ -54,12 +73,8 @@ def get_authenticated_user(
         )
 
     # Un JWT firmado puede sobrevivir a una suspensión; se valida en cada petición.
-    if db.bind.dialect.name == "postgresql":
-        suspended = db.execute(text(
-            "SELECT banned_until > now() FROM auth.users WHERE id = :id"
-        ), {"id": str(user.id_usuario)}).scalar()
-        if suspended:
-            raise HTTPException(status_code=403, detail="La cuenta está suspendida")
+    if cuenta_suspendida(db, user.id_usuario):
+        raise HTTPException(status_code=403, detail="La cuenta está suspendida")
     return user
 
 

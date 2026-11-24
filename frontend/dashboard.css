@@ -328,6 +328,15 @@ button, input { font: inherit; }
 .account-dialog label { display: block; margin: 18px 0 8px; font-size: .87rem; font-weight: 600; }
 .account-dialog input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid #7b8497; border-radius: 10px; }
 .account-dialog input:focus { outline: 3px solid #263d8c20; border-color: var(--dashboard-blue); }
+/* Botón Mostrar/Ocultar de password-toggle.js, igual que en el login. */
+.account-dialog .auth__password { position: relative; }
+.account-dialog .auth__password input { padding-right: 52px; }
+.account-dialog .auth__reveal { position: absolute; top: 50%; right: 2px; display: grid; place-items: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: #647085;
+  cursor: pointer; transform: translateY(-50%); }
+.account-dialog .auth__reveal:hover { background: #eef2fb; color: var(--dashboard-blue); }
+.account-dialog .auth__reveal:focus-visible { outline: 3px solid var(--dashboard-blue); outline-offset: -3px; }
+.account-dialog .auth__reveal svg { width: 20px; height: 20px; }
 .field-hint { margin: 7px 0 0; color: var(--dashboard-muted); font-size: .78rem; }
 .account-dialog__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 28px; }
 .account-button { min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: 12px; font-size: .87rem; font-weight: 600; cursor: pointer; }

@@ -14,11 +14,12 @@ from app.schemas.tickets import (
     ResolverTicketRequest,
     TicketCreate,
     TicketListRead,
-    TicketDetalleRead, TicketRead,
+    TicketRead,
     TipoProblemaRead,
 )
 from app.services.ticket_service import sincronizar_estado_equipo, ticket_service
 from app.services.report_service import limitar_tickets
+from app.core.tipos import Entero
 
 def usuario_puede_ver_ticket(ticket: Ticket, usuario: Usuario) -> bool:
     # El administrador tiene acceso global.
@@ -52,17 +53,7 @@ def listar_tickets(
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
-    # El JOIN obtiene el perfil asociado al id_usuario del ticket.
-    tecnico_alias = aliased(Usuario)
-    query = (
-        db.query(Ticket, Usuario, tecnico_alias, Aula, Equipo)
-        .join(Usuario, Ticket.id_usuario == Usuario.id_usuario)
-        .outerjoin(tecnico_alias, Ticket.id_tecnico == tecnico_alias.id_usuario)
-        .outerjoin(Aula, Ticket.id_aula == Aula.id_aula)
-        .outerjoin(Equipo, Ticket.id_equipo == Equipo.id_equipo)
-    )
-
-    query = limitar_tickets(query, usuario_actual)
+    query = limitar_tickets(_consulta_con_nombres(db), usuario_actual)
 
     if estado:
         query = query.filter(Ticket.estado == estado.value)
@@ -81,21 +72,36 @@ def listar_tickets(
         ):
             problemas.setdefault(id_ticket, []).append(nombre)
 
-    resultado = []
-    for ticket, reportante, tecnico, aula, equipo in filas:
-        datos_ticket = TicketRead.model_validate(ticket).model_dump()
-        datos_ticket.update(
-            nombre_reportante=_nombre_completo(reportante),
-            correo_reportante=reportante.email,
-            nombre_tecnico=_nombre_completo(tecnico) if tecnico else None,
-            nombre_aula=aula.nombre if aula else None,
-            equipo_tipo=equipo.tipo if equipo else None,
-            equipo_identificador=equipo.identificador if equipo else None,
-            problemas=problemas.get(ticket.id_ticket, []),
-        )
-        resultado.append(TicketListRead.model_validate(datos_ticket))
+    return [
+        _ticket_con_nombres(ticket, reportante, tecnico, aula, equipo, problemas.get(ticket.id_ticket, []))
+        for ticket, reportante, tecnico, aula, equipo in filas
+    ]
 
-    return resultado
+
+def _consulta_con_nombres(db: Session):
+    # El JOIN obtiene el perfil asociado al id_usuario del ticket.
+    tecnico_alias = aliased(Usuario)
+    return (
+        db.query(Ticket, Usuario, tecnico_alias, Aula, Equipo)
+        .join(Usuario, Ticket.id_usuario == Usuario.id_usuario)
+        .outerjoin(tecnico_alias, Ticket.id_tecnico == tecnico_alias.id_usuario)
+        .outerjoin(Aula, Ticket.id_aula == Aula.id_aula)
+        .outerjoin(Equipo, Ticket.id_equipo == Equipo.id_equipo)
+    )
+
+
+def _ticket_con_nombres(ticket, reportante, tecnico, aula, equipo, problemas) -> TicketListRead:
+    datos_ticket = TicketRead.model_validate(ticket).model_dump()
+    datos_ticket.update(
+        nombre_reportante=_nombre_completo(reportante),
+        correo_reportante=reportante.email,
+        nombre_tecnico=_nombre_completo(tecnico) if tecnico else None,
+        nombre_aula=aula.nombre if aula else None,
+        equipo_tipo=equipo.tipo if equipo else None,
+        equipo_identificador=equipo.identificador if equipo else None,
+        problemas=problemas,
+    )
+    return TicketListRead.model_validate(datos_ticket)
 
 
 
@@ -110,7 +116,7 @@ def listar_tipos_problema(
 
 @router.post("/{id_ticket}/asignar", response_model=TicketRead)
 def asignar_tecnico_a_ticket(
-    id_ticket: int,
+    id_ticket: Entero,
     datos: AsignarTecnicoRequest,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
@@ -124,7 +130,7 @@ def asignar_tecnico_a_ticket(
 
 @router.post("/{id_ticket}/resolver", response_model=TicketRead)
 def resolver_ticket(
-    id_ticket: int,
+    id_ticket: Entero,
     datos: ResolverTicketRequest,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
@@ -139,7 +145,7 @@ def resolver_ticket(
 
 @router.post("/{id_ticket}/cerrar", response_model=TicketRead)
 def cerrar_ticket(
-    id_ticket: int,
+    id_ticket: Entero,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
@@ -155,7 +161,7 @@ def cerrar_ticket(
 
 @router.post("/{id_ticket}/reabrir", response_model=TicketRead)
 def reabrir_ticket(
-    id_ticket: int,
+    id_ticket: Entero,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
@@ -169,30 +175,29 @@ def reabrir_ticket(
     )
 
 
-@router.get("/{id_ticket}", response_model=TicketDetalleRead)
+@router.get("/{id_ticket}", response_model=TicketListRead)
 def obtener_ticket(
-    id_ticket: int,
+    id_ticket: Entero,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
-    ticket = db.query(Ticket).filter(Ticket.id_ticket == id_ticket).first()
+    fila = _consulta_con_nombres(db).filter(Ticket.id_ticket == id_ticket).first()
 
     # Respondemos 404 si no existe o el usuario no puede verlo.
-    if not ticket or not usuario_puede_ver_ticket(ticket, usuario_actual):
+    if not fila or not usuario_puede_ver_ticket(fila[0], usuario_actual):
         raise HTTPException(status_code=404, detail="Ticket no encontrado")
 
-    detalle = TicketDetalleRead.model_validate(ticket)
-    detalle.problemas = [
+    problemas = [
         nombre for (nombre,) in db.query(TipoProblema.nombre)
         .join(TicketProblema, TicketProblema.id_tipo_problema == TipoProblema.id_tipo_problema)
-        .filter(TicketProblema.id_ticket == ticket.id_ticket)
+        .filter(TicketProblema.id_ticket == id_ticket)
         .order_by(TipoProblema.nombre)
     ]
-    return detalle
+    return _ticket_con_nombres(*fila, problemas)
 
 @router.get("/{id_ticket}/historial", response_model=list[EventoHistorial])
 def obtener_historial(
-    id_ticket: int,
+    id_ticket: Entero,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
@@ -305,7 +310,7 @@ def crear_ticket(
 
 @router.delete("/{id_ticket}", status_code=204)
 def eliminar_ticket(
-    id_ticket: int,
+    id_ticket: Entero,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):

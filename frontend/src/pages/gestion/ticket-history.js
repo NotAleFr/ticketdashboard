@@ -1,6 +1,16 @@
 // Línea de tiempo del historial de un ticket, compartida por gestión y reportes.
 import './ticket-history.css';
 
+// El backend puede devolver fechas UTC sin sufijo (columnas sin zona horaria);
+// sin "Z" el navegador las leería como hora local. Fechas inválidas: Invalid Date.
+export function parseApiDate(value) {
+  if (!value) return new Date(NaN);
+  const text = String(value).trim();
+  const hasOffset = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  const hasTime = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text);
+  return new Date(hasTime && !hasOffset ? `${text.replace(' ', 'T')}Z` : text);
+}
+
 export function describeEvent(event) {
   if (event.tipo === 'creacion') return 'Reportó el ticket';
   if (event.estado_anterior === 'Resuelto' && event.estado_actual === 'En Proceso') return 'Reabrió el ticket';

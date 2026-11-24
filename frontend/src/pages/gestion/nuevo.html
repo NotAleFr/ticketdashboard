@@ -17,7 +17,7 @@
   <body class="gestion-page new-ticket-page">
     <main class="ticket-shell new-ticket-shell">
       <header class="page-header new-ticket-header">
-        <a class="back-button" href="./gestion.html" aria-label="Volver a gestión de tickets">
+        <a class="back-button" href="/dashboard.html" aria-label="Volver">
           <img src="/imgs/iconos/arrowback.svg" alt="">
         </a>
         <div class="new-ticket-heading">
@@ -27,7 +27,7 @@
       </header>
 
       <section class="new-ticket-card" aria-label="Formulario de nuevo ticket">
-        <form id="new-ticket-form" novalidate>
+        <form id="new-ticket-form" class="is-checking-role" novalidate>
           <div class="form-row">
             <label class="form-label" for="ticket-title">Nombre del ticket</label>
             <div class="form-field">
@@ -92,7 +92,7 @@
           <button id="retry-options" class="retry-button" type="button" hidden>Reintentar</button>
 
           <footer class="form-actions">
-            <a class="cancel-button" href="./gestion.html">Cancelar</a>
+            <a class="cancel-button" href="/dashboard.html">Cancelar</a>
             <button id="submit-ticket" class="submit-ticket-button" type="submit" disabled>
               Crear ticket
             </button>

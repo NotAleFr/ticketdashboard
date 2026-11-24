@@ -111,8 +111,8 @@ def test_reports_require_authentication(client):
 
 def test_period_boundaries_use_sonora_midnight():
     now = datetime(2026, 1, 1, 6, 30, tzinfo=timezone.utc)  # Still Dec 31 in Sonora.
-    assert rango_periodo('hoy', now) == (datetime(2025, 12, 31, 7), datetime(2026, 1, 1, 7))
-    assert rango_periodo('ultima-semana', now)[0] == datetime(2025, 12, 25, 7)
-    assert rango_periodo('ultimo-mes', now)[0] == datetime(2025, 12, 2, 7)
-    assert rango_periodo('este-ano', now)[0] == datetime(2025, 1, 1, 7)
+    assert rango_periodo('hoy', now) == (datetime(2025, 12, 31, 7, tzinfo=timezone.utc), datetime(2026, 1, 1, 7, tzinfo=timezone.utc))
+    assert rango_periodo('ultima-semana', now)[0] == datetime(2025, 12, 25, 7, tzinfo=timezone.utc)
+    assert rango_periodo('ultimo-mes', now)[0] == datetime(2025, 12, 2, 7, tzinfo=timezone.utc)
+    assert rango_periodo('este-ano', now)[0] == datetime(2025, 1, 1, 7, tzinfo=timezone.utc)
     assert rango_periodo('todos', now) == (None, None)
