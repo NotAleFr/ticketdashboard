@@ -97,7 +97,7 @@ def listar_equipos(id_aula: Entero | None = None, db: Session = Depends(get_db))
 
 
 def _orden_natural(texto: str):
-    return [(0, int(parte), "") if parte.isdigit() else (1, 0, parte.casefold())
+    return [(0, int(parte), "") if parte.isdecimal() else (1, 0, parte.casefold())
             for parte in re.split(r"(\d+)", texto) if parte]
 
 
