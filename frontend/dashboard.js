@@ -1,5 +1,6 @@
 import { apiJson } from './src/api.js';
 import { supabaseClient } from './src/auth/supabase.js';
+import { enablePasswordToggles } from './src/pages/login/password-toggle.js';
 
 const roleLabel = document.getElementById('dashboard-role-label');
 const logoutButton = document.getElementById('logout-button');
@@ -27,6 +28,8 @@ const dashboardMessage = document.getElementById('dashboard-message');
 const dashboardGrid = document.getElementById('dashboard-grid');
 const dashboardError = document.getElementById('dashboard-error');
 const forcedLogoutButton = document.getElementById('forced-logout-button');
+
+enablePasswordToggles(passwordForm);
 
 // Nombres de rol tal como existen en el sistema (tabla de roles).
 function getRoleName(user) {
@@ -95,8 +98,10 @@ document.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && !settingsPanel.hidden) closeSettings(true);
 });
+// Sin relatedTarget no se cierra: Safari/WebKit no enfoca los botones al tocarlos y el
+// panel se cerraría antes del clic. Los toques fuera ya lo cierran con el listener de clic.
 document.querySelector('.account-settings').addEventListener('focusout', (event) => {
-  if (!event.currentTarget.contains(event.relatedTarget)) closeSettings();
+  if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) closeSettings();
 });
 
 function openAccountDialog(dialog) {
@@ -125,6 +130,8 @@ function openPasswordDialog(forced = false) {
     ? 'Tu cuenta usa una contraseña temporal. Crea una nueva para continuar.'
     : 'Elige una contraseña nueva para tu cuenta.';
   passwordForm.reset();
+  // Las contraseñas vuelven a ocultarse al abrir de nuevo el diálogo.
+  passwordForm.querySelectorAll('.auth__reveal[aria-pressed="true"]').forEach(button => button.click());
   confirmPassword.setCustomValidity('');
   passwordError.hidden = true;
   passwordSuccess.hidden = true;
@@ -154,6 +161,12 @@ document.querySelectorAll('[data-close-account-dialog]').forEach(button => {
     if (pendingAccountAction || (dialog === passwordDialog && forcedPasswordChange)) event.preventDefault();
   });
   dialog.addEventListener('close', () => {
+    // Chromium permite cerrar con Escape doble aunque se cancele el primero (CloseWatcher):
+    // mientras el cambio sea obligatorio, el diálogo se vuelve a abrir.
+    if (dialog === passwordDialog && forcedPasswordChange) {
+      dialog.showModal();
+      return;
+    }
     passwordForm.reset();
     settingsButton.focus();
   });

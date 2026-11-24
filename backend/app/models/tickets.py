@@ -17,7 +17,7 @@ class Ticket(Base):
     id_ticket = Column(Integer, primary_key=True, index=True)
     nombre_ticket = Column(String(100), nullable=False)
     descripcion = Column(Text, nullable=False)
-    fecha_registro = Column(DateTime, server_default=func.now())
+    fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
     estado = Column(String(30), default=EstadoTicket.ABIERTO.value)
 
     #FK's

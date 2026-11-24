@@ -6,8 +6,15 @@ from sqlalchemy import text
 from app.db.database import get_db
 from app.routers import tickets, usuarios, aulas, reportes, auth
 from app.core.config import settings
+from app.core.input_guard import InputGuardMiddleware, manejar_validacion
+from fastapi.exceptions import RequestValidationError
 
 app = FastAPI(title="API - Sistema de Gestión de Tickets")
+app.add_exception_handler(RequestValidationError, manejar_validacion)
+
+# Va antes de CORS: Starlette ejecuta primero el último middleware agregado,
+# así CORS envuelve también los 422 de esta validación.
+app.add_middleware(InputGuardMiddleware)
 
 # Vite development and the packaged Capacitor Android origin.
 app.add_middleware(

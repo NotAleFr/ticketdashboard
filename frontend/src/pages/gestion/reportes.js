@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { apiFetch, apiJson } from '../../api.js';
 import { renderHistory } from './ticket-history.js';
 
@@ -70,12 +73,20 @@ function element(tag, className, text) {
   return node;
 }
 
-function date(value) {
-  if (!value) return '—';
-  // SQLAlchemy devuelve fechas UTC sin sufijo cuando la columna no tiene zona.
-  const utc = /Z$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'short', timeZone: 'America/Hermosillo' }).format(new Date(utc));
+const shortDate = new Intl.DateTimeFormat('es-MX', { dateStyle: 'short', timeZone: 'America/Hermosillo' });
+const longDate = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Hermosillo' });
+
+// SQLAlchemy devuelve fechas UTC sin sufijo ("2026-10-22T02:00:00") cuando la columna no tiene
+// zona: se leen como UTC. Una fecha faltante o inválida se muestra como "—", porque format()
+// lanzaría RangeError y dejaría la página sin datos.
+function formatDate(formatter, value) {
+  const text = String(value ?? '').trim();
+  const naive = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(text);
+  const parsed = new Date(naive ? `${text.replace(' ', 'T')}Z` : text);
+  return text && !Number.isNaN(parsed.getTime()) ? formatter.format(parsed) : '—';
 }
+
+const date = (value) => formatDate(shortDate, value);
 
 function tableMessage(text) {
   const row = element('tr', '');
@@ -238,10 +249,26 @@ function restorePaginationFocus() {
   pendingFocus = null;
 }
 
-function dateTime(value) {
-  if (!value) return '—';
-  const utc = /Z$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
-  return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Hermosillo' }).format(new Date(utc));
+const dateTime = (value) => formatDate(longDate, value);
+
+// /tickets/{id} trae el estado actual; los nombres se toman de ahí cuando vienen y, si no,
+// se deducen de los ids actuales para no mezclar datos viejos de la fila con el estado nuevo.
+function detailFields(ticket, row) {
+  const has = (key) => ticket[key] !== undefined;
+  const lab = report?.laboratorios.find((item) => item.id_aula === ticket.id_aula);
+  const aula = has('nombre_aula') ? ticket.nombre_aula
+    : lab?.nombre ?? (ticket.id_aula === row.id_aula ? row.nombre_aula : null);
+  const equipo = has('equipo_identificador') ? ticket.equipo_identificador
+    : has('equipo') ? ticket.equipo
+      : ticket.id_equipo == null ? null : row.equipo || 'Asignado';
+  const tecnico = has('nombre_tecnico') ? ticket.nombre_tecnico
+    : ticket.id_tecnico == null ? null : row.nombre_tecnico || 'Asignado';
+  return {
+    aula: aula || '—',
+    equipo: equipo || 'Sin equipo',
+    tecnico: tecnico || 'Sin asignar',
+    reportante: (has('nombre_reportante') ? ticket.nombre_reportante : row.nombre_reportante) || '—',
+  };
 }
 
 async function showDetail(row) {
@@ -252,24 +279,28 @@ async function showDetail(row) {
   $('#detail-message').textContent = 'Cargando detalle…';
   dialog.showModal();
   try {
+    // Si solo falla el historial, el detalle del ticket se muestra igual.
     const [ticket, events] = await Promise.all([
       apiJson(`/tickets/${row.id_ticket}`),
-      apiJson(`/tickets/${row.id_ticket}/historial`),
+      apiJson(`/tickets/${row.id_ticket}/historial`).catch((error) => error),
     ]);
     if (request !== detailRequest || !dialog.open) return;
+    const names = detailFields(ticket, row);
     const status = element('span', `badge-status badge-${colors[states.indexOf(ticket.estado)]}`, ticket.estado);
     const categories = element('span', 'detail-chips');
     (ticket.problemas?.length ? ticket.problemas : ['Sin categoría']).forEach((name) => {
       categories.append(element('span', 'detail-chip', name));
     });
-    const fields = [['Título', ticket.nombre_ticket], ['Descripción', ticket.descripcion], ['Estado', status], ['Categorías', categories], ['Aula', row.nombre_aula], ['Equipo', row.equipo || 'Sin equipo'], ['Fecha', date(ticket.fecha_registro)], ['Responsable', row.nombre_tecnico || 'Sin asignar'], ['Reportante', row.nombre_reportante]];
+    const fields = [['Título', ticket.nombre_ticket], ['Descripción', ticket.descripcion], ['Estado', status], ['Categorías', categories], ['Aula', names.aula], ['Equipo', names.equipo], ['Fecha', date(ticket.fecha_registro)], ['Responsable', names.tecnico], ['Reportante', names.reportante]];
     fields.forEach(([label, value]) => {
       const dd = element('dd', '');
       if (value instanceof Node) dd.append(value);
       else dd.textContent = value;
       $('#ticket-detail-fields').append(element('dt', '', label), dd);
     });
-    renderHistory($('#detail-history'), events, dateTime);
+    if (events instanceof Error) {
+      $('#detail-history').replaceChildren(element('li', 'detail-history-error', `No se pudo cargar el historial: ${events.message}`));
+    } else renderHistory($('#detail-history'), events, dateTime);
     detailHistorySection.hidden = false;
     $('#detail-message').textContent = '';
   } catch (error) {
@@ -317,21 +348,52 @@ new ResizeObserver(() => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(fitRows, 150);
 }).observe(tableArea);
+// Nombre con la fecha local para no pisar exportaciones anteriores.
+function exportFileName() {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Hermosillo' }).format(new Date());
+  return `reportes-${day}.csv`;
+}
+
+function downloadCsv(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = element('a', '');
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  // Revocar enseguida puede cortar la descarga en navegadores lentos.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+// El WebView de Android ignora <a download>: el CSV se guarda en caché y se abre el menú de
+// compartir (Drive, Archivos, correo…). Devuelve false si el usuario cierra el menú.
+async function shareCsv(response, fileName) {
+  let data = await response.text();
+  // text() descarta el BOM UTF-8 que manda el backend; Excel lo necesita para leer los acentos.
+  const bom = String.fromCharCode(0xfeff);
+  if (!data.startsWith(bom)) data = bom + data;
+  const { uri } = await Filesystem.writeFile({ path: fileName, data, directory: Directory.Cache, encoding: Encoding.UTF8 });
+  try {
+    await Share.share({ title: 'Reporte de tickets', files: [uri], dialogTitle: 'Guardar o enviar el reporte' });
+  } catch (error) {
+    if (/cancel/i.test(error?.message || '')) return false;
+    throw error;
+  }
+  return true;
+}
+
 exportButton.addEventListener('click', async () => {
   if (busy || !report?.total) return;
   setBusy(true);
   message.textContent = 'Preparando exportación…';
   try {
     const response = await apiFetch(`/reportes/exportar?${applied}`);
-    const url = URL.createObjectURL(await response.blob());
-    const link = element('a', '');
-    link.href = url;
-    link.download = 'reportes.csv';
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    message.textContent = 'Se exportaron todos los tickets de los filtros aplicados.';
+    const fileName = exportFileName();
+    let done = true;
+    if (Capacitor.isNativePlatform()) done = await shareCsv(response, fileName);
+    else downloadCsv(await response.blob(), fileName);
+    message.textContent = done ? 'Se exportaron todos los tickets de los filtros aplicados.' : '';
   } catch (error) {
     message.textContent = `No se pudo exportar: ${error.message}`;
   } finally {

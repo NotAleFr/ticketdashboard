@@ -3,6 +3,7 @@ from typing import Annotated, List, Literal, Optional
 from datetime import datetime
 from uuid import UUID
 from app.models.tickets import EstadoTicket
+from app.core.tipos import Entero
 
 class TicketBase(BaseModel):
     nombre_ticket: str
@@ -13,7 +14,9 @@ class TicketBase(BaseModel):
 class TicketCreate(TicketBase):
     nombre_ticket: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
     descripcion: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
-    problemas_ids: List[int] = Field(min_length=1, max_length=20)
+    id_aula: Entero
+    id_equipo: Optional[Entero] = None
+    problemas_ids: List[Entero] = Field(min_length=1, max_length=20)
 
 class TicketUpdate(BaseModel):
     """Todos los campos opcionales: solo se actualiza lo que se envíe."""
@@ -21,7 +24,7 @@ class TicketUpdate(BaseModel):
     descripcion: Optional[str] = None
     estado: Optional[EstadoTicket] = None
     id_tecnico: Optional[UUID] = None
-    id_equipo: Optional[int] = None
+    id_equipo: Optional[Entero] = None
 
 class TicketRead(TicketBase):
     id_ticket: int
@@ -33,10 +36,6 @@ class TicketRead(TicketBase):
     id_tecnico: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
-
-class TicketDetalleRead(TicketRead):
-    problemas: List[str] = []
-
 
 class TicketListRead(TicketRead):
     nombre_reportante: str

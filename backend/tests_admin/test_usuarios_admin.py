@@ -41,7 +41,7 @@ def test_token_allows_small_auth_server_clock_skew(monkeypatch):
     now = datetime.now(timezone.utc)
     user_id = str(uuid4())
     token = jwt.encode(
-        {'sub': user_id, 'iat': now + timedelta(seconds=2), 'exp': now + timedelta(hours=1)},
+        {'sub': user_id, 'aud': 'authenticated', 'iat': now + timedelta(seconds=2), 'exp': now + timedelta(hours=1)},
         secret, algorithm='HS256',
     )
     assert security.verify_token(token)['sub'] == user_id
@@ -52,7 +52,7 @@ def test_token_rejects_large_auth_server_clock_skew(monkeypatch):
     monkeypatch.setattr(security.settings, 'supabase_jwt_secret', secret)
     now = datetime.now(timezone.utc)
     token = jwt.encode(
-        {'sub': str(uuid4()), 'iat': now + timedelta(minutes=1), 'exp': now + timedelta(hours=1)},
+        {'sub': str(uuid4()), 'aud': 'authenticated', 'iat': now + timedelta(minutes=1), 'exp': now + timedelta(hours=1)},
         secret, algorithm='HS256',
     )
     with pytest.raises(ValueError):

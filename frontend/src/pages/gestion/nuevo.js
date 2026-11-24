@@ -18,6 +18,17 @@ const newTicketCard = document.querySelector('.new-ticket-card');
 // Solo docentes (3) y administradores (1) pueden crear tickets; el backend rechaza al resto.
 const ROLES_QUE_CREAN = [1, 3];
 
+// El envío solo se habilita con aulas/tipos cargados y, si hay aula, con sus equipos cargados;
+// así nunca se envía id_equipo null por un error de red sin que el usuario lo sepa.
+let currentUser = null;
+let optionsReady = false;
+let equipmentReady = true;
+let submitting = false;
+
+function updateSubmitState() {
+  submitButton.disabled = submitting || !(optionsReady && equipmentReady);
+}
+
 function createOption(value, label) {
   const option = document.createElement('option');
   option.value = value;
@@ -96,21 +107,25 @@ function showNotAllowed() {
 }
 
 async function loadFormOptions() {
-  submitButton.disabled = true;
+  optionsReady = false;
+  updateSubmitState();
   retryButton.hidden = true;
-  showMessage('Cargando aulas y tipos de problema...', 'info');
+  showMessage(currentUser ? 'Cargando aulas y tipos de problema...' : 'Verificando permisos...', 'info');
 
   try {
-    const [user, classrooms, problemTypes] = await Promise.all([
-      apiJson('/usuarios/me'),
-      apiJson('/aulas?activas=true'),
-      apiJson('/tickets/tipos-problema'),
-    ]);
-
-    if (!ROLES_QUE_CREAN.includes(user.id_rol)) {
+    // El rol se revisa primero: quien no puede crear tickets no ve el formulario.
+    currentUser ??= await apiJson('/usuarios/me');
+    if (!ROLES_QUE_CREAN.includes(currentUser.id_rol)) {
       showNotAllowed();
       return;
     }
+    form.classList.remove('is-checking-role');
+    showMessage('Cargando aulas y tipos de problema...', 'info');
+
+    const [classrooms, problemTypes] = await Promise.all([
+      apiJson('/aulas?activas=true'),
+      apiJson('/tickets/tipos-problema'),
+    ]);
 
     renderClassrooms(classrooms);
     renderProblemTypes(problemTypes);
@@ -122,7 +137,8 @@ async function loadFormOptions() {
       return;
     }
     showMessage('');
-    submitButton.disabled = false;
+    optionsReady = true;
+    updateSubmitState();
   } catch (error) {
     showMessage(`No se pudieron cargar las opciones: ${error.message}`);
     retryButton.hidden = false;
@@ -171,6 +187,12 @@ async function loadEquipment() {
   equipmentSelect.replaceChildren(
     createOption('', classroomId ? 'Cargando equipos...' : 'Selecciona un aula primero'),
   );
+  equipmentReady = !classroomId;
+  updateSubmitState();
+  if (!retryButton.hidden) {
+    retryButton.hidden = true;
+    showMessage('');
+  }
 
   if (!classroomId) return;
 
@@ -181,8 +203,9 @@ async function loadEquipment() {
 
     if (request !== equipmentRequest) return;
 
+    // El backend solo rechaza equipos dados de baja; "En Mantenimiento" también se puede reportar.
     const availableEquipment = equipmentList.filter(
-      (equipment) => equipment.estado_actual === 'Operativo',
+      (equipment) => equipment.estado_actual !== 'Inoperativo',
     );
 
     equipmentSelect.replaceChildren(
@@ -199,12 +222,15 @@ async function loadEquipment() {
     }
 
     equipmentSelect.disabled = false;
+    equipmentReady = true;
+    updateSubmitState();
   } catch (error) {
     if (request !== equipmentRequest) return;
     equipmentSelect.replaceChildren(
       createOption('', 'No se pudieron cargar los equipos'),
     );
     showMessage(`No se pudieron cargar los equipos: ${error.message}`);
+    retryButton.hidden = false;
   }
 }
 
@@ -226,7 +252,8 @@ form.addEventListener('submit', async (event) => {
     problemas_ids: selectedProblemIds,
   };
 
-  submitButton.disabled = true;
+  submitting = true;
+  updateSubmitState();
   submitButton.textContent = 'Creando ticket...';
 
   try {
@@ -236,18 +263,38 @@ form.addEventListener('submit', async (event) => {
     });
 
     showMessage('Ticket creado. Volviendo a la lista...', 'success');
+    // replace: "Atrás" desde la lista no vuelve al formulario ya enviado.
     window.setTimeout(() => {
-      window.location.href = './gestion.html';
+      window.location.replace('./gestion.html');
     }, 900);
   } catch (error) {
     showMessage(`No se pudo crear el ticket: ${error.message}`);
-    submitButton.disabled = false;
+    submitting = false;
+    updateSubmitState();
     submitButton.textContent = 'Crear ticket';
   }
 });
 
 classroomSelect.addEventListener('change', loadEquipment);
-retryButton.addEventListener('click', loadFormOptions);
+// El mismo botón reintenta lo que falló: las opciones del formulario o los equipos del aula.
+retryButton.addEventListener('click', () => (optionsReady ? loadEquipment() : loadFormOptions()));
+
+// Volver/Cancelar regresa a la página de la app desde la que se llegó (panel o gestión);
+// sin una página previa propia, el enlace lleva al panel.
+function cameFromApp() {
+  try {
+    return window.history.length > 1 && new URL(document.referrer).origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+document.querySelectorAll('.back-button, .form-actions .cancel-button').forEach((link) => {
+  link.addEventListener('click', (event) => {
+    if (!cameFromApp()) return;
+    event.preventDefault();
+    window.history.back();
+  });
+});
 
 // Al corregir un campo se quita su mensaje de error.
 titleInput.addEventListener('input', () => setFieldError(titleInput, titleError, ''));

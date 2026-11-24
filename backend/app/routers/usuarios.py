@@ -5,15 +5,15 @@ from uuid import UUID
 from datetime import datetime, timezone
 import secrets
 import logging
-from sqlalchemy.exc import SQLAlchemyError
 from app.models.aulas import Aula
 from app.services.user_admin import auth_request, auth_metadata
 from app.schemas.users import UsuarioAdminRead, UsuarioProvisionado, UsuarioEstadoUpdate
-from app.core.deps import get_authenticated_user, get_current_user, require_admin
+from app.core.deps import SQL_SUSPENDIDA, filtrar_no_suspendidos, get_authenticated_user, get_current_user, require_admin
 from app.db.database import get_db
 from app.models.usuarios import Usuario
 from app.models.tickets import EstadoTicket, Ticket
 from app.schemas.users import UsuarioCreate, UsuarioUpdate, UsuarioRead
+from app.core.tipos import Entero
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
@@ -26,6 +26,8 @@ def validate_profile(values, db, lab_actual=None):
         if not isinstance(value, str) or not value.strip() or len(value) > 50:
             raise HTTPException(422, "Nombre y apellido son obligatorios (máximo 50 caracteres)")
         values[field] = value.strip()
+    telefono = values.get("telefono")
+    values["telefono"] = telefono.strip() or None if isinstance(telefono, str) else telefono
     if values.get("is_leader") is None or len(values.get("telefono") or "") > 20:
         raise HTTPException(422, "Datos de perfil no válidos")
     lab = values.get("laboratorio_asignado_id")
@@ -57,7 +59,7 @@ def bloquear_administradores(db, admin):
     if admin.id_usuario not in {row.id_usuario for row in admins}:
         raise HTTPException(403, "Ya no tienes permisos de administrador")
     if db.bind.dialect.name == "postgresql" and db.execute(
-        text("SELECT banned_until > now() FROM auth.users WHERE id = :id"), {"id": str(admin.id_usuario)}
+        text(SQL_SUSPENDIDA), {"id": str(admin.id_usuario)}
     ).scalar():
         raise HTTPException(403, "La cuenta está suspendida")
 
@@ -115,7 +117,7 @@ def obtener_usuario_actual(
 
 @router.get("/tecnicos", response_model=list[UsuarioRead])
 def listar_tecnicos(
-    id_aula: int | None = None,
+    id_aula: Entero | None = None,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(get_current_user),
 ):
@@ -129,7 +131,8 @@ def listar_tecnicos(
             detail="No tienes permiso para consultar técnicos",
         )
 
-    query = db.query(Usuario).filter(Usuario.id_rol == 2)
+    # Un técnico suspendido no puede entrar, así que tampoco se le puede asignar.
+    query = filtrar_no_suspendidos(db, db.query(Usuario).filter(Usuario.id_rol == 2))
 
     if es_lider:
         aula_del_lider = usuario_actual.laboratorio_asignado_id
@@ -173,7 +176,8 @@ def crear_usuario(datos: UsuarioCreate, db: Session = Depends(get_db), admin=Dep
     db.add(nuevo)
     try:
         db.commit()
-    except SQLAlchemyError:
+    except Exception:
+        # No solo errores de SQLAlchemy: cualquier fallo deja una cuenta sin perfil.
         db.rollback()
         try:
             auth_request("DELETE", f"/{identity['id']}")
@@ -210,6 +214,9 @@ def eliminar_usuario(id_usuario: UUID, db: Session = Depends(get_db), admin=Depe
 
 @router.post("/{id_usuario}/password")
 def restablecer_password(id_usuario: UUID, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    if id_usuario == admin.id_usuario:
+        # Quedaría bloqueado hasta cambiarla; para su propia cuenta usa "Cambiar contraseña".
+        raise HTTPException(422, "Para tu propia cuenta usa la opción Cambiar contraseña del panel")
     user = obtener_usuario(id_usuario, db, admin)
     password = secrets.token_urlsafe(18)
     # Primero se exige el cambio: si Supabase falla después, la contraseña anterior

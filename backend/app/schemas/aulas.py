@@ -1,6 +1,7 @@
 from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, StringConstraints
+from app.core.tipos import Entero
 
 EstadoEquipo = Literal["Operativo", "En Mantenimiento", "Inoperativo"]
 Texto50 = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
@@ -38,6 +39,7 @@ class EquipoBase(BaseModel):
 
 
 class EquipoCreate(EquipoBase):
+    id_aula: Entero
     tipo: Texto50
     identificador: Texto50
     estado_actual: EstadoEquipo = "Operativo"
@@ -46,7 +48,7 @@ class EquipoCreate(EquipoBase):
 class EquipoUpdate(BaseModel):
     tipo: Optional[Texto50] = None
     identificador: Optional[Texto50] = None
-    id_aula: Optional[int] = None
+    id_aula: Optional[Entero] = None
     estado_actual: Optional[EstadoEquipo] = None
 
 

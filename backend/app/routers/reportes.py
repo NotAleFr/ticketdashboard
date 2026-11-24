@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime, timezone
 from io import StringIO
 from typing import Literal
 
@@ -12,7 +13,8 @@ from app.db.database import get_db
 from app.models.aulas import Aula
 from app.models.tickets import EstadoTicket, Ticket
 from app.models.usuarios import Usuario
-from app.services.report_service import consulta_reporte, datos_fila, filas_reporte
+from app.services.report_service import ZONA_SONORA, consulta_reporte, datos_fila, filas_reporte
+from app.core.tipos import MAXIMO_INTEGER
 
 router = APIRouter(prefix="/reportes", tags=["Reportes"])
 Periodo = Literal["hoy", "ultima-semana", "ultimo-mes", "este-ano", "todos"]
@@ -21,7 +23,7 @@ Periodo = Literal["hoy", "ultima-semana", "ultimo-mes", "este-ano", "todos"]
 @router.get("")
 def obtener_reporte(
     estado: EstadoTicket | None = None,
-    id_aula: int | None = Query(default=None, ge=1),
+    id_aula: int | None = Query(default=None, ge=1, le=MAXIMO_INTEGER),
     periodo: Periodo = "ultimo-mes",
     pagina: int = Query(default=1, ge=1),
     por_pagina: int = Query(default=3, ge=1, le=100),
@@ -52,6 +54,10 @@ def obtener_reporte(
 
 
 def celda_csv(valor):
+    if isinstance(valor, datetime):
+        # Hora local de Sonora y sin microsegundos: así Excel la reconoce como fecha.
+        local = (valor if valor.tzinfo else valor.replace(tzinfo=timezone.utc)).astimezone(ZONA_SONORA)
+        return local.strftime("%Y-%m-%d %H:%M")
     texto = "" if valor is None else str(valor)
     # Evita que títulos/nombres escritos por usuarios se ejecuten como fórmulas.
     if texto.lstrip().startswith(("=", "+", "-", "@")) or texto.startswith(("\t", "\r", "\n")):
@@ -62,7 +68,7 @@ def celda_csv(valor):
 @router.get("/exportar")
 def exportar_reporte(
     estado: EstadoTicket | None = None,
-    id_aula: int | None = Query(default=None, ge=1),
+    id_aula: int | None = Query(default=None, ge=1, le=MAXIMO_INTEGER),
     periodo: Periodo = "ultimo-mes",
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),

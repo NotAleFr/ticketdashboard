@@ -4,7 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="0; url=/src/pages/login/login.html">
+  <!-- replace: esta página no queda en el historial, así "Atrás" no rebota al login. -->
+  <script>window.location.replace('/src/pages/login/login.html');</script>
+  <noscript><meta http-equiv="refresh" content="0; url=/src/pages/login/login.html"></noscript>
   <title>Redirigiendo al inicio de sesión</title>
 </head>
 

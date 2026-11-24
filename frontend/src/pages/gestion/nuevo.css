@@ -358,3 +358,8 @@ body.gestion-page.new-ticket-page {
     padding: 24px 18px;
   }
 }
+
+/* Mientras se verifica el rol solo se ven el estado y "Reintentar" (sin destello del formulario). */
+#new-ticket-form.is-checking-role > :not(#form-message, #retry-options) {
+  display: none;
+}

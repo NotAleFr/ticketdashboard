@@ -1,5 +1,6 @@
 import { supabaseClient } from '../../auth/supabase.js';
 import { enablePasswordToggles } from './password-toggle.js';
+import '../../native.js';
 
 const DASHBOARD_URL = '/dashboard.html';
 
@@ -14,7 +15,7 @@ enablePasswordToggles();
 // Quien ya tiene sesión va directo al panel (si la sesión no es válida, el panel la cierra).
 supabaseClient.auth.getSession().then(({ data }) => {
   if (data?.session) window.location.replace(DASHBOARD_URL);
-});
+}).catch((error) => console.error('No se pudo leer la sesión guardada:', error));
 
 // Distingue datos incorrectos de fallas de red o del servicio.
 function loginErrorMessage(error) {
@@ -42,6 +43,7 @@ loginForm.addEventListener('submit', async (event) => {
 
   loginButton.disabled = true;
   loginButton.value = 'Iniciando sesión...';
+  let loggedIn = false;
 
   try {
     const { error } = await supabaseClient.auth.signInWithPassword({
@@ -53,14 +55,19 @@ loginForm.addEventListener('submit', async (event) => {
       throw error;
     }
 
-    window.location.href = DASHBOARD_URL;
+    // replace: "Atrás" desde el panel no vuelve al login. El botón sigue desactivado
+    // mientras se navega para evitar un segundo envío.
+    loggedIn = true;
+    window.location.replace(DASHBOARD_URL);
   } catch (error) {
     errorMessage.textContent = loginErrorMessage(error);
     errorMessage.hidden = false;
 
     console.error('Error al iniciar sesión:', error);
   } finally {
-    loginButton.disabled = false;
-    loginButton.value = 'Entrar';
+    if (!loggedIn) {
+      loginButton.disabled = false;
+      loginButton.value = 'Entrar';
+    }
   }
 });

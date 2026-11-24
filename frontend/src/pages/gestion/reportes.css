@@ -30,26 +30,20 @@ body {
   color: var(--text-primary);
 }
 
-/* En pantalla de escritorio (> 1024px): sin barra de desplazamiento */
+/* En pantalla de escritorio (> 1024px): la página no se desplaza, así que no lleva barra.
+   Gráficos, tabla y detalle sí conservan la suya para que su contenido siga alcanzable. */
 @media (min-width: 1025px) {
   html,
   body {
     height: 100%;
     width: 100%;
     overflow: hidden;
+    scrollbar-width: none;
   }
 
-  *,
-  *::before,
-  *::after {
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-  }
-
-  *::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
   }
 
   .reportes-wrapper {
@@ -64,7 +58,8 @@ body {
 }
 
 .reportes-wrapper {
-  width: 100vw;
+  /* 100vw incluye la barra de desplazamiento clásica y recorta el borde derecho. */
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -529,7 +524,10 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
-  width: 25px;
+  /* Ancho mínimo para alinear cifras cortas; crece con cifras de 4-5 dígitos. */
+  min-width: 25px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   text-align: right;
   flex-shrink: 0;
 }
@@ -550,12 +548,7 @@ body {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.table-responsive::-webkit-scrollbar {
-  display: none;
+  scrollbar-width: thin;
 }
 
 .tickets-table {
@@ -1117,6 +1110,11 @@ button:disabled, select:disabled { opacity: 0.5; cursor: default; }
 
 #ticket-detail-fields { margin: 14px 0 0; }
 
+.detail-history-error {
+  color: #B91C1C;
+  font-size: 12px;
+}
+
 @media (max-width: 700px) {
   .filters-card {
     gap: 10px;
@@ -1125,7 +1123,8 @@ button:disabled, select:disabled { opacity: 0.5; cursor: default; }
 
   .filters-actions {
     order: -1;
-    flex-wrap: nowrap;
+    /* Con "Reintentar" visible no caben todos en 320-400px: bajan a otra línea. */
+    flex-wrap: wrap;
     justify-content: flex-start;
     gap: 8px;
   }

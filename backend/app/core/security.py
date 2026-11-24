@@ -62,7 +62,9 @@ def verify_token(token: str) -> dict:
             signing_key,
             algorithms=[algorithm],
             leeway=5,  # Small clock differences between Supabase and the API host.
-            options={"verify_aud": False},
+            # Solo sesiones de usuario: las llaves anon/service_role también son JWT firmados.
+            audience="authenticated",
+            options={"require": ["exp", "sub"]},
         )
 
     except jwt.PyJWKClientConnectionError:

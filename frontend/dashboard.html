@@ -86,10 +86,10 @@
       <p id="password-description" class="account-dialog__description">Elige una contraseña nueva para tu cuenta.</p>
       <form id="password-form">
         <label for="account-new-password">Nueva contraseña</label>
-        <input id="account-new-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="password-hint" autofocus>
+        <input id="account-new-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required aria-describedby="password-hint" autofocus data-reveal>
         <p id="password-hint" class="field-hint">Entre 8 y 128 caracteres.</p>
         <label for="account-confirm-password">Confirmar contraseña</label>
-        <input id="account-confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+        <input id="account-confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required data-reveal>
         <p id="password-error" class="account-error" role="alert" hidden></p>
         <div class="account-dialog__actions">
           <button class="account-button account-button--secondary" type="button" data-close-account-dialog>Cancelar</button>
